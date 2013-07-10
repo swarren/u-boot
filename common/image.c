@@ -990,8 +990,8 @@ int boot_ramdisk_high(struct lmb *lmb, ulong rd_data, ulong rd_len,
 		if (initrd_high == ~0)
 			initrd_copy_to_ram = 0;
 	} else {
-		/* not set, no restrictions to load high */
-		initrd_high = ~0;
+		/* make sure to put ramdisk in low memory */
+		initrd_high = getenv_bootm_low() + getenv_bootm_mapsize();
 	}
 
 
