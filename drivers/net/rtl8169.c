@@ -489,20 +489,20 @@ static int rtl_send(struct eth_device *dev, void *packet, int length)
 			cpu_to_le32((OWNbit | EORbit | FSbit | LSbit) |
 				    ((len > ETH_ZLEN) ? len : ETH_ZLEN));
 	}
+	rtl_flush_tx_desc(&tpc->TxDescArray[entry]);
 	RTL_W8(TxPoll, 0x40);	/* set polling bit */
 
 	tpc->cur_tx++;
 	to = currticks() + TX_TIMEOUT;
 	do {
-		flush_cache((unsigned long)&tpc->TxDescArray[entry],
-				sizeof(struct TxDesc));
+		rtl_inval_tx_desc(&tpc->TxDescArray[entry]);
 	} while ((le32_to_cpu(tpc->TxDescArray[entry].status) & OWNbit)
 				&& (currticks() < to));	/* wait */
 
 	if (currticks() >= to) {
 #ifdef DEBUG_RTL8169_TX
 		puts ("tx timeout/error\n");
-		printf ("%s elapsed time : %d\n", __FUNCTION__, currticks()-stime);
+		printf ("%s elapsed time : %lu\n", __FUNCTION__, currticks()-stime);
 #endif
 		ret = 0;
 	} else {
@@ -604,7 +604,7 @@ static void rtl8169_hw_start(struct eth_device *dev)
 	RTL_W16(MultiIntr, RTL_R16(MultiIntr) & 0xF000);
 
 #ifdef DEBUG_RTL8169
-	printf ("%s elapsed time : %d\n", __FUNCTION__, currticks()-stime);
+	printf ("%s elapsed time : %lu\n", __FUNCTION__, currticks()-stime);
 #endif
 }
 
@@ -642,7 +642,7 @@ static void rtl8169_init_ring(struct eth_device *dev)
 	}
 
 #ifdef DEBUG_RTL8169
-	printf ("%s elapsed time : %d\n", __FUNCTION__, currticks()-stime);
+	printf ("%s elapsed time : %lu\n", __FUNCTION__, currticks()-stime);
 #endif
 }
 
@@ -683,7 +683,7 @@ static int rtl_reset(struct eth_device *dev, bd_t *bis)
 	txb[5] = dev->enetaddr[5];
 
 #ifdef DEBUG_RTL8169
-	printf ("%s elapsed time : %d\n", __FUNCTION__, currticks()-stime);
+	printf ("%s elapsed time : %lu\n", __FUNCTION__, currticks()-stime);
 #endif
 	return 0;
 }
