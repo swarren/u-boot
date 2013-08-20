@@ -23,6 +23,11 @@ typedef __be64 fdt64_t;
 #define fdt64_to_cpu(x)		be64_to_cpu(x)
 #define cpu_to_fdt64(x)		cpu_to_be64(x)
 
+#define fdt32_to_cpup(p)	be32_to_cpup(p)
+#define cpu_to_fdt32p(p)	cpu_to_be32p(p)
+#define fdt64_to_cpup(p)	be64_to_cpup(p)
+#define cpu_to_fdt64p(p)	cpu_to_be64p(p)
+
 /* adding a ramdisk needs 0x44 bytes in version 2008.10 */
 #define FDT_RAMDISK_OVERHEAD	0x80
 

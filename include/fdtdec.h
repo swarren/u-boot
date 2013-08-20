@@ -25,13 +25,17 @@ typedef u64 fdt_addr_t;
 typedef u64 fdt_size_t;
 #define FDT_ADDR_T_NONE (-1ULL)
 #define fdt_addr_to_cpu(reg) be64_to_cpu(reg)
+#define fdt_addr_to_cpup(p) be64_to_cpup(p)
 #define fdt_size_to_cpu(reg) be64_to_cpu(reg)
+#define fdt_size_to_cpup(p) be64_to_cpu(p)
 #else
 typedef u32 fdt_addr_t;
 typedef u32 fdt_size_t;
 #define FDT_ADDR_T_NONE (-1U)
 #define fdt_addr_to_cpu(reg) be32_to_cpu(reg)
+#define fdt_addr_to_cpup(p) be32_to_cpup(p)
 #define fdt_size_to_cpu(reg) be32_to_cpu(reg)
+#define fdt_size_to_cpup(p) be32_to_cpup(p)
 #endif
 
 /* Information obtained about memory from the FDT */
@@ -64,6 +68,8 @@ enum fdt_compat_id {
 	COMPAT_NVIDIA_TEGRA20_SFLASH,	/* Tegra 2 SPI flash controller */
 	COMPAT_NVIDIA_TEGRA20_SLINK,	/* Tegra 2 SPI SLINK controller */
 	COMPAT_NVIDIA_TEGRA114_SPI,	/* Tegra 114 SPI controller */
+	COMPAT_NVIDIA_TEGRA20_PCIE,	/* Tegra 20 PCIe controller */
+	COMPAT_NVIDIA_TEGRA30_PCIE,	/* Tegra 30 PCIe controller */
 	COMPAT_SMSC_LAN9215,		/* SMSC 10/100 Ethernet LAN9215 */
 	COMPAT_SAMSUNG_EXYNOS5_SROMC,	/* Exynos5 SROMC */
 	COMPAT_SAMSUNG_S3C2440_I2C,	/* Exynos I2C Controller */
