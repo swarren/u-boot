@@ -25,7 +25,8 @@ Please define CONFIG_ARCH_DEVICE_TREE))
 DTS_CPPFLAGS := -x assembler-with-cpp \
 		-DARCH_CPU_DTS=\"$(SRCTREE)/arch/$(ARCH)/dts/$(CONFIG_ARCH_DEVICE_TREE).dtsi\" \
 		-DBOARD_DTS=\"$(SRCTREE)/board/$(VENDOR)/$(BOARD)/dts/$(DEVICE_TREE).dts\" \
-		-I$(SRCTREE)/board/$(VENDOR)/dts -I$(SRCTREE)/arch/$(ARCH)/dts
+		-I$(SRCTREE)/include -I$(SRCTREE)/board/$(VENDOR)/dts \
+		-I$(SRCTREE)/arch/$(ARCH)/dts
 
 all:	$(obj).depend $(LIB)
 
