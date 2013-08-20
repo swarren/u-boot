@@ -657,6 +657,8 @@ extern int pci_hose_config_device(struct pci_controller *hose,
 const char * pci_class_str(u8 class);
 int pci_last_busno(void);
 
+int pci_skip_dev(struct pci_controller *hose, pci_dev_t dev);
+
 #ifdef CONFIG_MPC824X
 extern void pci_mpc824x_init (struct pci_controller *hose);
 #endif
