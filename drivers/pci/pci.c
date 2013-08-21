@@ -98,6 +98,62 @@ PCI_READ_VIA_DWORD_OP(word, u16 *, 0x02)
 PCI_WRITE_VIA_DWORD_OP(byte, u8, 0x03, 0x000000ff)
 PCI_WRITE_VIA_DWORD_OP(word, u16, 0x02, 0x0000ffff)
 
+#define PCI_FIND_CAP_TTL 48
+
+static u8 pci_find_capability_start(pci_dev_t dev)
+{
+	u16 status;
+
+	pci_read_config_word(dev, PCI_STATUS, &status);
+	if ((status & PCI_STATUS_CAP_LIST) == 0)
+		return 0;
+
+	return PCI_CAPABILITY_LIST;
+}
+
+static u8 pci_find_next_cap_ttl(pci_dev_t dev, u8 pos, u8 cap, u8 *ttl)
+{
+	while ((*ttl)--) {
+		u8 id;
+
+		pci_read_config_byte(dev, pos, &pos);
+		if (pos < 0x40)
+			break;
+
+		pos &= ~3;
+
+		pci_read_config_byte(dev, pos + PCI_CAP_LIST_ID, &id);
+
+		if (id == 0xff)
+			break;
+
+		if (id == cap)
+			return pos;
+
+		pos += PCI_CAP_LIST_NEXT;
+	}
+
+	return 0;
+}
+
+static u8 pci_find_next_cap(pci_dev_t dev, u8 pos, u8 cap)
+{
+	u8 ttl = PCI_FIND_CAP_TTL;
+
+	return pci_find_next_cap_ttl(dev, pos, cap, &ttl);
+}
+
+u8 pci_find_capability(pci_dev_t dev, u8 cap)
+{
+	u8 pos;
+
+	pos = pci_find_capability_start(dev);
+	if (pos)
+		return pci_find_next_cap(dev, pos, cap);
+
+	return 0;
+}
+
 /* Get a virtual address associated with a BAR region */
 void *pci_map_bar(pci_dev_t pdev, int bar, int flags)
 {
