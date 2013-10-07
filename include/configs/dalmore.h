@@ -87,6 +87,9 @@
 #define CONFIG_CMD_NET
 #define CONFIG_CMD_DHCP
 
+/* Backlight enable GPIO. TBD - move to DT when LCD driver added */
+#define DSI_PANEL_BL_EN_GPIO		GPIO_PH2
+
 #include "tegra-common-post.h"
 
 #endif /* __CONFIG_H */

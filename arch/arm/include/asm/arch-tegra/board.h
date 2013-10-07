@@ -29,4 +29,7 @@ void pin_mux_spi(void);      /* overrideable SPI pinmux setup     */
 void pin_mux_nand(void);     /* overrideable NAND pinmux setup    */
 void pin_mux_display(void);  /* overrideable DISPLAY pinmux setup */
 
+/* Enable needed power rails */
+void board_vreg_init(void);
+
 #endif
