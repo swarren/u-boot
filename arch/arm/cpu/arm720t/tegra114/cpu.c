@@ -140,18 +140,11 @@ void t114_init_clocks(void)
 	clock_set_enable(PERIPH_ID_CACHE2, 1);
 	clock_set_enable(PERIPH_ID_GPIO, 1);
 	clock_set_enable(PERIPH_ID_TMR, 1);
-	clock_set_enable(PERIPH_ID_RTC, 1);
 	clock_set_enable(PERIPH_ID_CPU, 1);
 	clock_set_enable(PERIPH_ID_EMC, 1);
 	clock_set_enable(PERIPH_ID_I2C5, 1);
-	clock_set_enable(PERIPH_ID_FUSE, 1);
-	clock_set_enable(PERIPH_ID_PMC, 1);
 	clock_set_enable(PERIPH_ID_APBDMA, 1);
 	clock_set_enable(PERIPH_ID_MEM, 1);
-	clock_set_enable(PERIPH_ID_IRAMA, 1);
-	clock_set_enable(PERIPH_ID_IRAMB, 1);
-	clock_set_enable(PERIPH_ID_IRAMC, 1);
-	clock_set_enable(PERIPH_ID_IRAMD, 1);
 	clock_set_enable(PERIPH_ID_CORESIGHT, 1);
 	clock_set_enable(PERIPH_ID_MSELECT, 1);
 	clock_set_enable(PERIPH_ID_EMC1, 1);
@@ -180,7 +173,6 @@ void t114_init_clocks(void)
 	reset_set_enable(PERIPH_ID_COP, 0);
 	reset_set_enable(PERIPH_ID_EMC, 0);
 	reset_set_enable(PERIPH_ID_I2C5, 0);
-	reset_set_enable(PERIPH_ID_FUSE, 0);
 	reset_set_enable(PERIPH_ID_APBDMA, 0);
 	reset_set_enable(PERIPH_ID_MEM, 0);
 	reset_set_enable(PERIPH_ID_CORESIGHT, 0);
