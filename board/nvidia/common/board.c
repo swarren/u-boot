@@ -143,10 +143,6 @@ int board_init(void)
 # endif /* CONFIG_TEGRA_PMU */
 #endif /* CONFIG_SYS_I2C_TEGRA */
 
-#ifdef CONFIG_TEGRA114
-	/* Enable needed power rails. TBD: Move to kernel or driver init. */
-	board_vreg_init();
-#endif
 #ifdef CONFIG_USB_EHCI_TEGRA
 	pin_mux_usb();
 	usb_process_devicetree(gd->fdt_blob);
