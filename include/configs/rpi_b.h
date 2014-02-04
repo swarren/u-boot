@@ -146,6 +146,41 @@
 	"bootcmd_mmc0=setenv devnum 0; run mmc_boot;\0"
 #define BOOT_TARGETS_MMC "mmc0"
 
+#define BOOTCMD_INIT_USB "run usb_init; "
+#define BOOTCMDS_USB \
+	"usb_init=" \
+		"if ${usb_need_init}; then " \
+			"set usb_need_init false; " \
+			"usb start 0; " \
+		"fi\0" \
+	\
+	"usb_boot=" \
+		"setenv devtype usb; " \
+		BOOTCMD_INIT_USB \
+		"if usb dev ${devnum}; then " \
+			"run scan_boot; " \
+		"fi\0" \
+	\
+	"bootcmd_usb0=setenv devnum 0; run usb_boot;\0"
+#define BOOT_TARGETS_USB "usb0"
+
+#define BOOTCMDS_DHCP \
+	"bootcmd_dhcp=" \
+		BOOTCMD_INIT_USB \
+		"if dhcp ${scriptaddr} boot.scr.uimg; then "\
+			"source ${scriptaddr}; " \
+		"fi\0"
+#define BOOT_TARGETS_DHCP "dhcp"
+
+#define BOOTCMDS_PXE \
+	"bootcmd_pxe=" \
+		BOOTCMD_INIT_USB \
+		"dhcp; " \
+		"if pxe get; then " \
+			"pxe boot; " \
+		"fi\0"
+#define BOOT_TARGETS_PXE "pxe"
+
 #define BOOTCMDS_COMMON \
 	"rootpart=1\0" \
 	\
@@ -185,18 +220,22 @@
 	\
 	"boot_targets=" \
 		BOOT_TARGETS_MMC " " \
+		BOOT_TARGETS_USB " " \
+		BOOT_TARGETS_PXE " " \
+		BOOT_TARGETS_DHCP " " \
 		"\0" \
 	\
 	"boot_prefixes=/\0" \
 	\
 	"boot_scripts=boot.scr.uimg\0" \
 	\
-	BOOTCMDS_MMC
+	BOOTCMDS_MMC \
+	BOOTCMDS_USB \
+	BOOTCMDS_DHCP \
+	BOOTCMDS_PXE
 
 #define CONFIG_BOOTCOMMAND \
-	"for target in ${boot_targets}; do run bootcmd_${target}; done"
-
-#define CONFIG_BOOTCOMMAND \
+	"set usb_need_init; " \
 	"for target in ${boot_targets}; do run bootcmd_${target}; done"
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -225,16 +264,17 @@
 #define CONFIG_CMDLINE_TAG
 #define CONFIG_INITRD_TAG
 
+/* USB support */
+#define CONFIG_USB_DWC2_OTG
+#define CONFIG_USB_HOST_ETHER
+#define CONFIG_USB_STORAGE
+#define CONFIG_USB_ETHER_SMSC95XX
+#define CONFIG_CMD_USB
+
 #include <config_distro_defaults.h>
 
 /* Some things don't make sense on this HW or yet */
 #undef CONFIG_CMD_FPGA
-#undef CONFIG_CMD_NET
-#undef CONFIG_CMD_NFS
 #undef CONFIG_CMD_SAVEENV
-#undef CONFIG_CMD_DHCP
-#undef CONFIG_CMD_MII
-#undef CONFIG_CMD_NET
-#undef CONFIG_CMD_PING
 
 #endif
