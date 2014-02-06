@@ -182,6 +182,7 @@
 #define BOOT_TARGETS_PXE "pxe"
 
 #define BOOTCMDS_COMMON \
+	"dhcpuboot=usb start; dhcp u-boot.uimg; bootm\0" \
 	"rootpart=1\0" \
 	\
 	"do_script_boot="                                                 \
