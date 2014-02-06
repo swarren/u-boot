@@ -271,6 +271,7 @@
 #define CONFIG_USB_STORAGE
 #define CONFIG_USB_ETHER_SMSC95XX
 #define CONFIG_CMD_USB
+#define CONFIG_MISC_INIT_R
 
 #include <config_distro_defaults.h>
 
