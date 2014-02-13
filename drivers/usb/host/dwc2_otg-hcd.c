@@ -85,11 +85,11 @@ int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
 	hprt0.d32 = dwc_otg_read_hprt0(&g_core_if);
 	hprt0.b.prtrst = 1;
 	dwc_write_reg32(g_core_if.host_if->hprt0, hprt0.d32);
-	udelay(50000);
+	mdelay(50);
 	hprt0.b.prtrst = 0;
 	dwc_write_reg32(g_core_if.host_if->hprt0, hprt0.d32);
 
-	udelay(50000);
+	mdelay(50);
 	hprt0.d32 = dwc_read_reg32(g_core_if.host_if->hprt0);
 
 	for (i = 0; i < MAX_DEVICE; i++) {

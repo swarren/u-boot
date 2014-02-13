@@ -1854,7 +1854,7 @@ void dwc_otg_core_reset(dwc_otg_core_if_t *core_if)
 	} while (greset.b.csftrst == 1);
 
 	/* Wait for 3 PHY Clocks */
-	udelay(100 * 1000);
+	mdelay(100);
 }
 
 
