@@ -101,8 +101,8 @@ int dwc_otg_set_param_otg_cap(dwc_otg_core_if_t *core_if, int32_t val)
 	int valid;
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 0, 2)) {
-		printf("warning: Wrong value for otg_cap parameter\n");
-		printf("warning: otg_cap parameter must be 0, 1 or 2\n");
+		puts("warning: Wrong value for otg_cap parameter");
+		puts("warning: otg_cap parameter must be 0, 1 or 2");
 		retval = -1;
 		goto out;
 	}
@@ -163,7 +163,7 @@ int32_t dwc_otg_get_param_otg_cap(dwc_otg_core_if_t *core_if)
 int dwc_otg_set_param_opt(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong value for opt parameter\n");
+		puts("warning: Wrong value for opt parameter");
 		return -1;
 	}
 	core_if->core_params->opt = val;
@@ -179,7 +179,7 @@ int dwc_otg_set_param_dma_enable(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong value for dma enable\n");
+		puts("warning: Wrong value for dma enable");
 		return -1;
 	}
 
@@ -209,8 +209,8 @@ int dwc_otg_set_param_dma_desc_enable(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong value for dma_enable\n");
-		printf("warning: dma_desc_enable must be 0 or 1\n");
+		puts("warning: Wrong value for dma_enable");
+		puts("warning: dma_desc_enable must be 0 or 1");
 		return -1;
 	}
 
@@ -239,8 +239,8 @@ int dwc_otg_set_param_host_support_fs_ls_low_power(dwc_otg_core_if_t *core_if,
 						   int32_t val)
 {
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong value for host_support_fs_low_power\n");
-		printf("warning: host_support_fs_low_power must be 0 or 1\n");
+		puts("warning: Wrong value for host_support_fs_low_power");
+		puts("warning: host_support_fs_low_power must be 0 or 1");
 		return -1;
 	}
 	core_if->core_params->host_support_fs_ls_low_power = val;
@@ -258,8 +258,8 @@ int dwc_otg_set_param_enable_dynamic_fifo(dwc_otg_core_if_t *core_if,
 {
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong value for enable_dynamic_fifo\n");
-		printf("warning: enable_dynamic_fifo must be 0 or 1\n");
+		puts("warning: Wrong value for enable_dynamic_fifo");
+		puts("warning: enable_dynamic_fifo must be 0 or 1");
 		return -1;
 	}
 
@@ -286,8 +286,8 @@ int dwc_otg_set_param_data_fifo_size(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 32, 32768)) {
-		printf("warning: Wrong value for data_fifo_size\n");
-		printf("warning: data_fifo_size must be 32-32768\n");
+		puts("warning: Wrong value for data_fifo_size");
+		puts("warning: data_fifo_size must be 32-32768");
 		return -1;
 	}
 
@@ -315,14 +315,14 @@ int dwc_otg_set_param_dev_rx_fifo_size(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 16, 32768)) {
-		printf("warning: Wrong value for dev_rx_fifo_size\n");
-		printf("warning: dev_rx_fifo_size must be 16-32768\n");
+		puts("warning: Wrong value for dev_rx_fifo_size");
+		puts("warning: dev_rx_fifo_size must be 16-32768");
 		return -1;
 	}
 
 	if (val > dwc_read_reg32(&core_if->core_global_regs->grxfsiz)) {
 		if (dwc_otg_param_initialized(core_if->core_params->dev_rx_fifo_size)) {
-		printf("warning: %d invalid for dev_rx_fifo_size parameter\n", val);
+			printf("warning: %d invalid for dev_rx_fifo_size parameter\n", val);
 		}
 		val = dwc_read_reg32(&core_if->core_global_regs->grxfsiz);
 		retval = -1;
@@ -343,8 +343,8 @@ int dwc_otg_set_param_dev_nperio_tx_fifo_size(dwc_otg_core_if_t *core_if,
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 16, 32768)) {
-		printf("warning: Wrong value for dev_nperio_tx_fifo\n");
-		printf("warning: dev_nperio_tx_fifo must be 16-32768\n");
+		puts("warning: Wrong value for dev_nperio_tx_fifo");
+		puts("warning: dev_nperio_tx_fifo must be 16-32768");
 		return -1;
 	}
 
@@ -376,8 +376,8 @@ int dwc_otg_set_param_host_rx_fifo_size(dwc_otg_core_if_t *core_if,
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 16, 32768)) {
-		printf("warning: Wrong value for host_rx_fifo_size\n");
-		printf("warning: host_rx_fifo_size must be 16-32768\n");
+		puts("warning: Wrong value for host_rx_fifo_size");
+		puts("warning: host_rx_fifo_size must be 16-32768");
 		return -1;
 	}
 
@@ -408,8 +408,8 @@ int dwc_otg_set_param_host_nperio_tx_fifo_size(dwc_otg_core_if_t *core_if,
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 16, 32768)) {
-		printf("warning: Wrong value for host_nperio_tx_fifo_size\n");
-		printf("warning: host_nperio_tx_fifo_size must be 16-32768\n");
+		puts("warning: Wrong value for host_nperio_tx_fifo_size");
+		puts("warning: host_nperio_tx_fifo_size must be 16-32768");
 		return -1;
 	}
 
@@ -440,8 +440,8 @@ int dwc_otg_set_param_host_perio_tx_fifo_size(dwc_otg_core_if_t *core_if,
 {
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 16, 32768)) {
-		printf("warning: Wrong value for host_perio_tx_fifo_size\n");
-		printf("warning: host_perio_tx_fifo_size must be 16-32768\n");
+		puts("warning: Wrong value for host_perio_tx_fifo_size");
+		puts("warning: host_perio_tx_fifo_size must be 16-32768");
 		return -1;
 	}
 
@@ -474,8 +474,8 @@ int dwc_otg_set_param_max_transfer_size(dwc_otg_core_if_t *core_if,
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 2047, 524288)) {
-		printf("warning: Wrong value for max_transfer_size\n");
-		printf("warning: max_transfer_size must be 2047-524288\n");
+		puts("warning: Wrong value for max_transfer_size");
+		puts("warning: max_transfer_size must be 2047-524288");
 		return -1;
 	}
 
@@ -506,8 +506,8 @@ int dwc_otg_set_param_max_packet_count(dwc_otg_core_if_t *core_if, int32_t val)
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 15, 511)) {
-		printf("warning: Wrong value for max_packet_count\n");
-		printf("warning: max_packet_count must be 15-511\n");
+		puts("warning: Wrong value for max_packet_count");
+		puts("warning: max_packet_count must be 15-511");
 		return -1;
 	}
 
@@ -537,8 +537,8 @@ int dwc_otg_set_param_host_channels(dwc_otg_core_if_t *core_if, int32_t val)
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 1, 16)) {
-		printf("warning: Wrong value for host_channels\n");
-		printf("warning: host_channels must be 1-16\n");
+		puts("warning: Wrong value for host_channels");
+		puts("warning: host_channels must be 1-16");
 		return -1;
 	}
 
@@ -567,8 +567,8 @@ int dwc_otg_set_param_dev_endpoints(dwc_otg_core_if_t *core_if, int32_t val)
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 1, 15)) {
-		printf("warning: Wrong value for dev_endpoints\n");
-		printf("warning: dev_endpoints must be 1-15\n");
+		puts("warning: Wrong value for dev_endpoints");
+		puts("warning: dev_endpoints must be 1-15");
 		return -1;
 	}
 
@@ -598,8 +598,8 @@ int dwc_otg_set_param_phy_type(dwc_otg_core_if_t *core_if, int32_t val)
 	int valid = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 0, 2)) {
-		printf("warning: Wrong value for phy_type\n");
-		printf("warning: phy_type must be 0, 1 or 2\n");
+		puts("warning: Wrong value for phy_type");
+		puts("warning: phy_type must be 0, 1 or 2");
 		return -1;
 	}
 #ifndef NO_FS_PHY_HW_CHECKS
@@ -645,8 +645,8 @@ int dwc_otg_set_param_speed(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong value for speed parameter\n");
-		printf("warning: max_speed parameter must be 0 or 1\n");
+		puts("warning: Wrong value for speed parameter");
+		puts("warning: max_speed parameter must be 0 or 1");
 		return -1;
 	}
 	if ((val == 0)
@@ -676,9 +676,9 @@ int dwc_otg_set_param_host_ls_low_power_phy_clk(dwc_otg_core_if_t *core_if,
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf
-		    ("warning: Wrong value for host_ls_low_power_phy_clk parameter\n");
-		printf("warning: host_ls_low_power_phy_clk must be 0 or 1\n");
+		puts
+		    ("warning: Wrong value for host_ls_low_power_phy_clk parameter");
+		puts("warning: host_ls_low_power_phy_clk must be 0 or 1");
 		return -1;
 	}
 
@@ -708,8 +708,8 @@ int32_t dwc_otg_get_param_host_ls_low_power_phy_clk(dwc_otg_core_if_t *core_if)
 int dwc_otg_set_param_phy_ulpi_ddr(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong value for phy_ulpi_ddr\n");
-		printf("warning: phy_upli_ddr must be 0 or 1\n");
+		puts("warning: Wrong value for phy_ulpi_ddr");
+		puts("warning: phy_upli_ddr must be 0 or 1");
 		return -1;
 	}
 
@@ -726,8 +726,8 @@ int dwc_otg_set_param_phy_ulpi_ext_vbus(dwc_otg_core_if_t *core_if,
 					int32_t val)
 {
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong valaue for phy_ulpi_ext_vbus\n");
-		printf("warning: phy_ulpi_ext_vbus must be 0 or 1\n");
+		puts("warning: Wrong valaue for phy_ulpi_ext_vbus");
+		puts("warning: phy_ulpi_ext_vbus must be 0 or 1");
 		return -1;
 	}
 
@@ -743,8 +743,8 @@ int32_t dwc_otg_get_param_phy_ulpi_ext_vbus(dwc_otg_core_if_t *core_if)
 int dwc_otg_set_param_phy_utmi_width(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	if (DWC_OTG_PARAM_TEST(val, 8, 8) && DWC_OTG_PARAM_TEST(val, 16, 16)) {
-		printf("warning: Wrong valaue for phy_utmi_width\n");
-		printf("warning: phy_utmi_width must be 8 or 16\n");
+		puts("warning: Wrong valaue for phy_utmi_width");
+		puts("warning: phy_utmi_width must be 8 or 16");
 		return -1;
 	}
 
@@ -760,8 +760,8 @@ int32_t dwc_otg_get_param_phy_utmi_width(dwc_otg_core_if_t *core_if)
 int dwc_otg_set_param_ulpi_fs_ls(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong valaue for ulpi_fs_ls\n");
-		printf("warning: ulpi_fs_ls must be 0 or 1\n");
+		puts("warning: Wrong valaue for ulpi_fs_ls");
+		puts("warning: ulpi_fs_ls must be 0 or 1");
 		return -1;
 	}
 
@@ -777,8 +777,8 @@ int32_t dwc_otg_get_param_ulpi_fs_ls(dwc_otg_core_if_t *core_if)
 int dwc_otg_set_param_ts_dline(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong valaue for ts_dline\n");
-		printf("warning: ts_dline must be 0 or 1\n");
+		puts("warning: Wrong valaue for ts_dline");
+		puts("warning: ts_dline must be 0 or 1");
 		return -1;
 	}
 
@@ -795,8 +795,8 @@ int dwc_otg_set_param_i2c_enable(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong valaue for i2c_enable\n");
-		printf("warning: i2c_enable must be 0 or 1\n");
+		puts("warning: Wrong valaue for i2c_enable");
+		puts("warning: i2c_enable must be 0 or 1");
 		return -1;
 	}
 #ifndef NO_FS_PHY_HW_CHECK
@@ -825,8 +825,8 @@ int dwc_otg_set_param_dev_perio_tx_fifo_size(dwc_otg_core_if_t *core_if,
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 4, 768)) {
-		printf("warning: Wrong value for dev_perio_tx_fifo_size\n");
-		printf("warning: dev_perio_tx_fifo_size must be 4-768\n");
+		puts("warning: Wrong value for dev_perio_tx_fifo_size");
+		puts("warning: dev_perio_tx_fifo_size must be 4-768");
 		return -1;
 	}
 
@@ -854,8 +854,8 @@ int dwc_otg_set_param_en_multiple_tx_fifo(dwc_otg_core_if_t *core_if,
 {
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong valaue for en_multiple_tx_fifo,\n");
-		printf("warning: en_multiple_tx_fifo must be 0 or 1\n");
+		puts("warning: Wrong valaue for en_multiple_tx_fifo,");
+		puts("warning: en_multiple_tx_fifo must be 0 or 1");
 		return -1;
 	}
 
@@ -883,8 +883,8 @@ int dwc_otg_set_param_dev_tx_fifo_size(dwc_otg_core_if_t *core_if, int32_t val,
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 4, 768)) {
-		printf("warning: Wrong value for dev_tx_fifo_size\n");
-		printf("warning: dev_tx_fifo_size must be 4-768\n");
+		puts("warning: Wrong value for dev_tx_fifo_size");
+		puts("warning: dev_tx_fifo_size must be 4-768");
 		return -1;
 	}
 
@@ -912,8 +912,8 @@ int dwc_otg_set_param_thr_ctl(dwc_otg_core_if_t *core_if, int32_t val)
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 0, 7)) {
-		printf("warning: Wrong value for thr_ctl\n");
-		printf("warning: thr_ctl must be 0-7\n");
+		puts("warning: Wrong value for thr_ctl");
+		puts("warning: thr_ctl must be 0-7");
 		return -1;
 	}
 
@@ -942,8 +942,8 @@ int dwc_otg_set_param_lpm_enable(dwc_otg_core_if_t *core_if, int32_t val)
 	int retval = 0;
 
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
-		printf("warning: Wrong value for lpm_enable\n");
-		printf("warning: lpm_enable must be 0 or 1\n");
+		puts("warning: Wrong value for lpm_enable");
+		puts("warning: lpm_enable must be 0 or 1");
 		return -1;
 	}
 
@@ -968,8 +968,8 @@ int32_t dwc_otg_get_param_lpm_enable(dwc_otg_core_if_t *core_if)
 int dwc_otg_set_param_tx_thr_length(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	if (DWC_OTG_PARAM_TEST(val, 8, 128)) {
-		printf("warning: Wrong valaue for tx_thr_length\n");
-		printf("warning: tx_thr_length must be 8 - 128\n");
+		puts("warning: Wrong valaue for tx_thr_length");
+		puts("warning: tx_thr_length must be 8 - 128");
 		return -1;
 	}
 
@@ -985,8 +985,8 @@ int32_t dwc_otg_get_param_tx_thr_length(dwc_otg_core_if_t *core_if)
 int dwc_otg_set_param_rx_thr_length(dwc_otg_core_if_t *core_if, int32_t val)
 {
 	if (DWC_OTG_PARAM_TEST(val, 8, 128)) {
-		printf("warning: Wrong valaue for rx_thr_length\n");
-		printf("warning: rx_thr_length must be 8 - 128\n");
+		puts("warning: Wrong valaue for rx_thr_length");
+		puts("warning: rx_thr_length must be 8 - 128");
 		return -1;
 	}
 
@@ -1075,7 +1075,7 @@ int dwc_otg_set_param_ic_usb_cap(dwc_otg_core_if_t *core_if,
 	int retval = 0;
 	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
 		printf("warning: `%d' invalid for parameter `ic_usb_cap'\n", val);
-		printf("warning: ic_usb_cap must be 0 or 1\n");
+		puts("warning: ic_usb_cap must be 0 or 1");
 		return -1;
 	}
 
@@ -1102,7 +1102,7 @@ int dwc_otg_set_param_ahb_thr_ratio(dwc_otg_core_if_t *core_if, int32_t val)
 
 	if (DWC_OTG_PARAM_TEST(val, 0, 3)) {
 		printf("warning: `%d' invalid for parameter `ahb_thr_ratio'\n", val);
-		printf("warning: ahb_thr_ratio must be 0 - 3\n");
+		puts("warning: ahb_thr_ratio must be 0 - 3");
 		return -1;
 	}
 
@@ -1710,11 +1710,11 @@ void dwc_otg_core_host_init(dwc_otg_core_if_t *core_if)
 				(op_mode == DWC_HWCFG2_OP_MODE_SRP_CAPABLE_HOST) ||
 				(op_mode == DWC_HWCFG2_OP_MODE_NO_SRP_CAPABLE_HOST)))) {
 
-				printf("Host can't operate in Descriptor DMA mode.\n"
+				puts("Host can't operate in Descriptor DMA mode.\n"
 					  "Either core version is below 2.90a or "
 					  "GHWCFG2, GHWCFG4 registers' values do not allow Descriptor DMA in host mode.\n"
 					  "To run the driver in Buffer DMA host mode set dma_desc_enable "
-					  "module parameter to 0.\n");
+					  "module parameter to 0.");
 				return;
 		}
 		hcfg.d32 = dwc_read_reg32(&host_if->host_global_regs->hcfg);

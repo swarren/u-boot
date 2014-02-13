@@ -44,20 +44,19 @@ void handle_error(int line, uint32_t d)
 
 	printf("Error condition at line %d: ", line);
 	if (hcint.b.ahberr)
-		printf(" AHBERR");
+		puts(" AHBERR");
 	if (hcint.b.stall)
-		printf(" STALL");
+		puts(" STALL");
 	if (hcint.b.bblerr)
-		printf(" NAK");
+		puts(" NAK");
 	if (hcint.b.ack)
-		printf(" ACK");
+		puts(" ACK");
 	if (hcint.b.nyet)
-		printf(" NYET");
+		puts(" NYET");
 	if (hcint.b.xacterr)
-		printf(" XACTERR");
+		puts(" XACTERR");
 	if (hcint.b.datatglerr)
-		printf(" DATATGLERR");
-	printf("\n");
+		puts(" DATATGLERR");
 }
 
 /*
@@ -234,7 +233,7 @@ static int dwc_otg_submit_rh_msg(struct usb_device *dev, unsigned long pipe,
 	hprt0_data_t hprt0 = {.d32 = 0 };
 
 	if (usb_pipeint(pipe)) {
-		printf("Root-Hub submit IRQ: NOT implemented");
+		puts("Root-Hub submit IRQ: NOT implemented");
 		return 0;
 	}
 
@@ -416,7 +415,7 @@ static int dwc_otg_submit_rh_msg(struct usb_device *dev, unsigned long pipe,
 	case RH_SET_CONFIGURATION:
 		break;
 	default:
-		printf("unsupported root hub command\n");
+		puts("unsupported root hub command");
 		stat = USB_ST_STALLED;
 	}
 
@@ -541,7 +540,7 @@ int submit_bulk_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
 
 					break;
 				} else if (hcint_new.b.stall) {
-					printf("DWC OTG: Channel halted\n");
+					puts("DWC OTG: Channel halted");
 					bulk_data_toggle[devnum][ep] = DWC_OTG_HC_PID_DATA0;
 
 					stop_transfer = 1;
