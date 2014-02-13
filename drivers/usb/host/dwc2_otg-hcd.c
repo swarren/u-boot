@@ -19,9 +19,11 @@
 
 static int root_hub_devnum;
 
-static uint8_t *allocated_buffer;
-static uint8_t *aligned_buffer;
-static uint8_t *status_buffer;
+/*
+ * We need doubleword-aligned buffers for DMA transfers
+ */
+DEFINE_ALIGN_BUFFER(uint8_t, aligned_buffer, DWC_OTG_HCD_DATA_BUF_SIZE, 8);
+DEFINE_ALIGN_BUFFER(uint8_t, status_buffer, DWC_OTG_HCD_STATUS_BUF_SIZE, 8);
 
 static dwc_otg_core_if_t g_core_if;
 
@@ -64,13 +66,6 @@ void handle_error(int line, uint32_t d)
  */
 int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
 {
-	/*
-	 * We need doubleword-aligned buffers for DMA transfers
-	 */
-	allocated_buffer = (uint8_t *)malloc(DWC_OTG_HCD_STATUS_BUF_SIZE + DWC_OTG_HCD_DATA_BUF_SIZE + 8);
-	uint32_t addr = (uint32_t)allocated_buffer;
-	aligned_buffer = (uint8_t *) ((addr + 7) & ~7);
-	status_buffer = (uint8_t *)((uint32_t)aligned_buffer + DWC_OTG_HCD_DATA_BUF_SIZE);
 	int i, j;
 	hprt0_data_t hprt0 = {.d32 = 0 };
 
@@ -109,8 +104,6 @@ int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
 
 int usb_lowlevel_stop(int index)
 {
-	free(allocated_buffer);
-
 	return 0;
 }
 
