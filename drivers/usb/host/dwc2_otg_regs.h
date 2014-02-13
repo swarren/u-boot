@@ -112,6 +112,9 @@ typedef struct dwc_otg_core_global_regs {
 	volatile uint32_t guid;
 	/**Synopsys ID Register (Read Only).  <i>Offset: 040h</i> */
 	volatile uint32_t gsnpsid;
+#define DWC_SNPSID_DEVID_MASK 0xfffff000
+#define DWC_SNPSID_DEVID_OTG_VER_2xx 0x4f542000
+
 	/**User HW Config1 Register (Read Only).  <i>Offset: 044h</i> */
 	volatile uint32_t ghwcfg1;
 	/**User HW Config2 Register (Read Only).  <i>Offset: 048h</i> */

@@ -72,10 +72,10 @@ int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
 
 	root_hub_devnum = 0;
 	memset(&g_core_if, 0, sizeof(g_core_if));
-	dwc_otg_cil_init(&g_core_if, (uint32_t *)0x20980000);
+	dwc_otg_cil_init(&g_core_if, (uint32_t *)CONFIG_USB_DWC2_REG_ADDR);
 
-	if ((g_core_if.snpsid & 0xFFFFF000) !=
-		0x4F542000) {
+	if ((g_core_if.snpsid & DWC_SNPSID_DEVID_MASK) !=
+		DWC_SNPSID_DEVID_OTG_VER_2xx) {
 		printf("SNPSID is invalid (not DWC OTG device): %08x\n", g_core_if.snpsid);
 		return -ENODEV;
 	}
