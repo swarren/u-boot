@@ -5,6 +5,7 @@
  */
 
 #include <common.h>
+#include <errno.h>
 #include <usb.h>
 #include <malloc.h>
 #include "dwc2_otg.h"
@@ -76,7 +77,7 @@ int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
 	if ((g_core_if.snpsid & 0xFFFFF000) !=
 		0x4F542000) {
 		printf("SNPSID is invalid (not DWC OTG device): %08x\n", g_core_if.snpsid);
-		return -1;
+		return -ENODEV;
 	}
 
 	dwc_otg_core_init(&g_core_if);
@@ -445,14 +446,14 @@ int submit_bulk_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
 		printf("submit_bulk_msg: %d is more then available buffer size(%d)\n", len, DWC_OTG_HCD_DATA_BUF_SIZE);
 		dev->status = 0;
 		dev->act_len = done;
-		return -1;
+		return -EINVAL;
 	}
 
 	hc_regs = host_if->hc_regs[CHANNEL];
 
 	if (devnum == root_hub_devnum) {
 		dev->status = 0;
-		return -1;
+		return -EINVAL;
 	}
 
 	while ((done < len) && !stop_transfer) {
@@ -579,7 +580,7 @@ int submit_control_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
 		printf("submit_control_msg: %d is more then available buffer size(%d)\n", len, DWC_OTG_HCD_DATA_BUF_SIZE);
 		dev->status = 0;
 		dev->act_len = done;
-		return -1;
+		return -EINVAL;
 	}
 
 	/* Initialize channel, OUT for setup buffer */
@@ -718,5 +719,5 @@ int submit_int_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
 {
 	printf("dev = %p pipe = %#lx buf = %p size = %d int = %d\n", dev, pipe,
 	       buffer, len, interval);
-	return -1;
+	return -ENOSYS;
 }
