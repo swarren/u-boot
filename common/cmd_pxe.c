@@ -597,8 +597,8 @@ static int label_localboot(struct pxe_label *label)
  * If the label specifies an initrd file, it will be stored in the location
  * given by the 'ramdisk_addr_r' environment variable.
  *
- * If the label specifies an 'append' line, its contents will overwrite that
- * of the 'bootargs' environment variable.
+ * If the label specifies an 'append' line, its contents will be prepended to
+ * the 'bootargs' environment variable.
  */
 static int label_boot(cmd_tbl_t *cmdtp, struct pxe_label *label)
 {
@@ -607,6 +607,7 @@ static int label_boot(cmd_tbl_t *cmdtp, struct pxe_label *label)
 	char mac_str[29] = "";
 	char ip_str[68] = "";
 	char *bootargs;
+	char *bootargs_prev;
 	int bootm_argc = 3;
 	int len = 0;
 
@@ -668,6 +669,12 @@ static int label_boot(cmd_tbl_t *cmdtp, struct pxe_label *label)
 	if (label->append)
 		len += strlen(label->append);
 
+	bootargs_prev = getenv("bootargs");
+	if (bootargs_prev) {
+		printf("bootargs_prev: %s\n", bootargs_prev);
+		len += strlen(bootargs_prev)+1; // +1 for one space char ' ' see below
+	}
+
 	if (len) {
 		bootargs = malloc(len + 1);
 		if (!bootargs)
@@ -675,6 +682,10 @@ static int label_boot(cmd_tbl_t *cmdtp, struct pxe_label *label)
 		bootargs[0] = '\0';
 		if (label->append)
 			strcpy(bootargs, label->append);
+		if(bootargs_prev) {
+			strcat(bootargs, " ");
+			strcat(bootargs, bootargs_prev);
+		}
 		strcat(bootargs, ip_str);
 		strcat(bootargs, mac_str);
 
