@@ -173,7 +173,7 @@
 #define BOOT_TARGETS_DHCP "dhcp"
 
 #define BOOTCMDS_PXE \
-	"bootcmd_pxe=" \
+	"bootcmd_pxe=setenv bootargs smsc95xx.macaddr=${usbethaddr}; " \
 		BOOTCMD_INIT_USB \
 		"dhcp; " \
 		"if pxe get; then " \
