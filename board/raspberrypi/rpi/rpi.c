@@ -16,6 +16,7 @@
 #include <asm/arch/sdhci.h>
 #include <asm/global_data.h>
 #include <dm/platform_data/serial_pl01x.h>
+#include <asm/io.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -301,6 +302,26 @@ int board_init(void)
 	get_board_rev();
 
 	gd->bd->bi_boot_params = 0x100;
+
+	// System timer 0x7e003000 (0x20003000)
+	// #define REG_CONTROL     0x00
+	// #define REG_COUNTER_LO  0x04
+	// #define REG_COUNTER_HI  0x08
+	// #define REG_COMPARE(n)  (0x0c + (n) * 4)
+	writel(readl((void *)0x20003004) + 10000000, (void *)0x2000300c);
+
+	// IRQ controller 0x7e00b000 (0x2000b000)
+	//static int reg_pending[] __initconst = { 0x00, 0x04, 0x08 };
+	//static int reg_enable[] __initconst = { 0x18, 0x10, 0x14 };
+	//static int reg_disable[] __initconst = { 0x24, 0x1c, 0x20 };
+	//static int bank_irqs[] __initconst = { 8, 32, 32 };
+	writel(1, (void *)0x2000b210);
+
+	__asm__ __volatile__(
+		"mrs     r0, cpsr; \n"
+		"bic     r0, r0, #(1 << 7); \n" // clear I mask
+		"msr     cpsr, r0; \n"
+		:::"memory");
 
 	return power_on_module(BCM2835_MBOX_POWER_DEVID_USB_HCD);
 }
