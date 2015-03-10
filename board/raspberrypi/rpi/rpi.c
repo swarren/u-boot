@@ -19,6 +19,46 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+uint32_t *trace_en = (uint32_t *)0x00800000;
+uint32_t **trace_ptr = (uint32_t **)0x00800004;
+uint32_t *trace_limit = (uint32_t *)0x01800000;
+
+__attribute((__no_instrument_function__))
+void __cyg_profile_func_enter(void *this_fn, void *call_site)
+{
+	if (!*trace_en)
+		return;
+
+	uint32_t tag = 'S' << 24 | 'T' << 16 | 'A' << 8 | 'R';
+	(*trace_ptr)[0] = tag;
+	(*trace_ptr)[1] = (uint32_t)this_fn;
+	(*trace_ptr)[2] = (uint32_t)call_site;
+	(*trace_ptr)[3] = 0;
+
+	*trace_ptr += 4;
+	trace_ptr[1] = *trace_ptr;
+	if (*trace_ptr >= trace_limit)
+		*trace_ptr = trace_en + 4;
+}
+
+__attribute((__no_instrument_function__))
+void __cyg_profile_func_exit(void *this_fn, void *call_site)
+{
+	if (!*trace_en)
+		return;
+
+	uint32_t tag = 'E' << 24 | 'X' << 16 | 'I' << 8 | 'T';
+	(*trace_ptr)[0] = tag;
+	(*trace_ptr)[1] = (uint32_t)this_fn;
+	(*trace_ptr)[2] = (uint32_t)call_site;
+	(*trace_ptr)[3] = 0;
+
+	*trace_ptr += 4;
+	trace_ptr[1] = *trace_ptr;
+	if (*trace_ptr >= trace_limit)
+		*trace_ptr = trace_en + 4;
+}
+
 static const struct bcm2835_gpio_platdata gpio_platdata = {
 	.base = BCM2835_GPIO_BASE,
 };

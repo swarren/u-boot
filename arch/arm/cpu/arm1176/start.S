@@ -38,6 +38,15 @@
 	.globl reset
 
 reset:
+
+init_trace:
+	mov r1, #0
+	mov r0, #0x00800000
+	str r1, [r0]
+	add r1, r0, #0x10
+	add r0, r0, #4
+	str r1, [r0]
+orig_reset:
 	/*
 	 * set the cpu to SVC32 mode
 	 */
