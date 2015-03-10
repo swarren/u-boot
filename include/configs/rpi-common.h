@@ -110,7 +110,9 @@
 #define CONFIG_SYS_LOAD_ADDR		0x1000000
 #define CONFIG_CONSOLE_MUX
 #define CONFIG_SYS_CONSOLE_IS_IN_ENV
+#if 0
 #define CONFIG_PREBOOT			"usb start"
+#endif
 
 /* Shell */
 #define CONFIG_SYS_MAXARGS		8
