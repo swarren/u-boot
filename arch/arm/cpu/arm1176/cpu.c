@@ -49,3 +49,15 @@ static void cache_flush (void)
 	/* mem barrier to sync things */
 	asm ("mcr p15, 0, %0, c7, c10, 4": :"r" (0));
 }
+
+#if !defined(CONFIG_SYS_ICACHE_OFF) || !defined(CONFIG_SYS_DCACHE_OFF)
+void enable_caches(void)
+{
+#ifndef CONFIG_SYS_ICACHE_OFF
+        icache_enable();
+#endif
+#ifndef CONFIG_SYS_DCACHE_OFF
+        dcache_enable();
+#endif
+}
+#endif

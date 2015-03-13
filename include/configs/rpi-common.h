@@ -13,7 +13,9 @@
 #define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_BCM2835
 #define CONFIG_ARCH_CPU_INIT
+#if 0
 #define CONFIG_SYS_DCACHE_OFF
+#endif
 /*
  * 2835 is a SKU in a series for which the 2708 is the first or primary SoC,
  * so 2708 has historically been used rather than a dedicated 2835 ID.
@@ -53,9 +55,11 @@
 /* GPIO */
 #define CONFIG_BCM2835_GPIO
 /* LCD */
+#if 0
 #define CONFIG_LCD
 #define CONFIG_LCD_DT_SIMPLEFB
 #define LCD_BPP				LCD_COLOR16
+#endif
 /*
  * Prevent allocation of RAM for FB; the real FB address is queried
  * dynamically from the VideoCore co-processor, and comes from RAM

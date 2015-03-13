@@ -67,6 +67,7 @@ static inline phys_addr_t virt_to_phys(void * vaddr)
  * read/writes.  We define __arch_*[bl] here, and leave __arch_*w
  * to the architecture specific code.
  */
+#if 0
 #define __arch_getb(a)			(*(volatile unsigned char *)(a))
 #define __arch_getw(a)			(*(volatile unsigned short *)(a))
 #define __arch_getl(a)			(*(volatile unsigned int *)(a))
@@ -76,6 +77,65 @@ static inline phys_addr_t virt_to_phys(void * vaddr)
 #define __arch_putw(v,a)		(*(volatile unsigned short *)(a) = (v))
 #define __arch_putl(v,a)		(*(volatile unsigned int *)(a) = (v))
 #define __arch_putq(v,a)		(*(volatile unsigned long long *)(a) = (v))
+#else
+static inline void __arch_check_addr(unsigned int addr)
+{
+	/* DRAM */
+	if (addr < (224 * 1024))
+		return;
+	if ((addr >= 0x20000000) && (addr <= 0x21000000))
+		return;
+	printf("ERROR: IO ADDR 0x%08x\n", addr);
+}
+
+static inline unsigned char __arch_getb(unsigned long a)
+{
+	__arch_check_addr(a);
+	return *(volatile unsigned char *)(a);
+}
+
+static inline unsigned short __arch_getw(unsigned long a)
+{
+	__arch_check_addr(a);
+	return *(volatile unsigned short *)(a);
+}
+
+static inline unsigned int __arch_getl(unsigned long a)
+{
+	__arch_check_addr(a);
+	return *(volatile unsigned int *)(a);
+}
+
+static inline unsigned long long __arch_getq(unsigned long a)
+{
+	__arch_check_addr(a);
+	return *(volatile unsigned long long *)(a);
+}
+
+static inline void __arch_putb(unsigned int v, unsigned long a)
+{
+	__arch_check_addr(a);
+	*(volatile unsigned char *)(a) = v;
+}
+
+static inline void __arch_putw(unsigned int v, unsigned long a)
+{
+	__arch_check_addr(a);
+	*(volatile unsigned short *)(a) = v;
+}
+
+static inline void __arch_putl(unsigned int v, unsigned long a)
+{
+	__arch_check_addr(a);
+	*(volatile unsigned int *)(a) = v;
+}
+
+static inline void __arch_putq(unsigned int v, unsigned long a)
+{
+	__arch_check_addr(a);
+	*(volatile unsigned long long *)(a) = v;
+}
+#endif
 
 static inline void __raw_writesb(unsigned long addr, const void *data,
 				 int bytelen)
@@ -122,15 +182,15 @@ static inline void __raw_readsl(unsigned long addr, void *data, int longlen)
 		*buf++ = __arch_getl(addr);
 }
 
-#define __raw_writeb(v,a)	__arch_putb(v,a)
-#define __raw_writew(v,a)	__arch_putw(v,a)
-#define __raw_writel(v,a)	__arch_putl(v,a)
-#define __raw_writeq(v,a)	__arch_putq(v,a)
+#define __raw_writeb(v,a)	__arch_putb(v,(unsigned long)a)
+#define __raw_writew(v,a)	__arch_putw(v,(unsigned long)a)
+#define __raw_writel(v,a)	__arch_putl(v,(unsigned long)a)
+#define __raw_writeq(v,a)	__arch_putq(v,(unsigned long)a)
 
-#define __raw_readb(a)		__arch_getb(a)
-#define __raw_readw(a)		__arch_getw(a)
-#define __raw_readl(a)		__arch_getl(a)
-#define __raw_readq(a)		__arch_getq(a)
+#define __raw_readb(a)		__arch_getb((unsigned long)a)
+#define __raw_readw(a)		__arch_getw((unsigned long)a)
+#define __raw_readl(a)		__arch_getl((unsigned long)a)
+#define __raw_readq(a)		__arch_getq((unsigned long)a)
 
 /*
  * TODO: The kernel offers some more advanced versions of barriers, it might
@@ -141,15 +201,15 @@ static inline void __raw_readsl(unsigned long addr, void *data, int longlen)
 #define __iormb()	dmb()
 #define __iowmb()	dmb()
 
-#define writeb(v,c)	({ u8  __v = v; __iowmb(); __arch_putb(__v,c); __v; })
-#define writew(v,c)	({ u16 __v = v; __iowmb(); __arch_putw(__v,c); __v; })
-#define writel(v,c)	({ u32 __v = v; __iowmb(); __arch_putl(__v,c); __v; })
-#define writeq(v,c)	({ u64 __v = v; __iowmb(); __arch_putq(__v,c); __v; })
+#define writeb(v,c)	({ u8  __v = v; __iowmb(); __arch_putb(__v,(unsigned long)c); __v; })
+#define writew(v,c)	({ u16 __v = v; __iowmb(); __arch_putw(__v,(unsigned long)c); __v; })
+#define writel(v,c)	({ u32 __v = v; __iowmb(); __arch_putl(__v,(unsigned long)c); __v; })
+#define writeq(v,c)	({ u64 __v = v; __iowmb(); __arch_putq(__v,(unsigned long)c); __v; })
 
-#define readb(c)	({ u8  __v = __arch_getb(c); __iormb(); __v; })
-#define readw(c)	({ u16 __v = __arch_getw(c); __iormb(); __v; })
-#define readl(c)	({ u32 __v = __arch_getl(c); __iormb(); __v; })
-#define readq(c)	({ u64 __v = __arch_getq(c); __iormb(); __v; })
+#define readb(c)	({ u8  __v = __arch_getb((unsigned long)c); __iormb(); __v; })
+#define readw(c)	({ u16 __v = __arch_getw((unsigned long)c); __iormb(); __v; })
+#define readl(c)	({ u32 __v = __arch_getl((unsigned long)c); __iormb(); __v; })
+#define readq(c)	({ u64 __v = __arch_getq((unsigned long)c); __iormb(); __v; })
 
 /*
  * The compiler seems to be incapable of optimising constants

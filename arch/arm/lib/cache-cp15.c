@@ -42,6 +42,13 @@ void set_section_dcache(int section, enum dcache_option option)
 	page_table[section] = value;
 }
 
+void set_section_disabled(int section)
+{
+	u32 *page_table = (u32 *)gd->arch.tlb_addr;
+
+	page_table[section] = 0;
+}
+
 __weak void mmu_page_table_flush(unsigned long start, unsigned long stop)
 {
 	debug("%s: Warning: not implemented\n", __func__);
@@ -71,12 +78,17 @@ __weak void dram_bank_mmu_setup(int bank)
 	for (i = bd->bi_dram[bank].start >> 20;
 	     i < (bd->bi_dram[bank].start >> 20) + (bd->bi_dram[bank].size >> 20);
 	     i++) {
+#if 0
 #if defined(CONFIG_SYS_ARM_CACHE_WRITETHROUGH)
 		set_section_dcache(i, DCACHE_WRITETHROUGH);
 #elif defined(CONFIG_SYS_ARM_CACHE_WRITEALLOC)
 		set_section_dcache(i, DCACHE_WRITEALLOC);
 #else
 		set_section_dcache(i, DCACHE_WRITEBACK);
+#endif
+#else
+		// At least mbox code doesn't work with cache on
+		set_section_dcache(i, DCACHE_OFF);
 #endif
 	}
 }
@@ -87,10 +99,31 @@ static inline void mmu_setup(void)
 	int i;
 	u32 reg;
 
+/*
+GPIO	0x20200000
+TIMER	0x20003000
+MBOX	0x2000b880
+UART	0x20201000
+SDHCI	0x20300000
+DWC2	0x20980000
+WDOG	0x20100000 // disallow
+*/
+
 	arm_init_before_mmu();
 	/* Set up an identity-mapping for all 4GB, rw for everyone */
-	for (i = 0; i < 4096; i++)
-		set_section_dcache(i, DCACHE_OFF);
+	for (i = 0; i < 4096; i++) {
+		switch (i) {
+		case 0x20000000 >> MMU_SECTION_SHIFT:
+		case 0x20200000 >> MMU_SECTION_SHIFT:
+		case 0x20300000 >> MMU_SECTION_SHIFT:
+		case 0x20900000 >> MMU_SECTION_SHIFT:
+			set_section_dcache(i, DCACHE_OFF);
+			break;
+		default:
+			set_section_disabled(i);
+			break;
+		}
+	}
 
 	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
 		dram_bank_mmu_setup(i);

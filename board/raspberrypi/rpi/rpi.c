@@ -328,12 +328,14 @@ int board_mmc_init(bd_t *bis)
 
 int ft_board_setup(void *blob, bd_t *bd)
 {
+#ifdef CONFIG_LCD_DT_SIMPLEFB
 	/*
 	 * For now, we simply always add the simplefb DT node. Later, we
 	 * should be more intelligent, and e.g. only do this if no enabled DT
 	 * node exists for the "real" graphics driver.
 	 */
 	lcd_dt_simplefb_add_node(blob);
+#endif
 
 	return 0;
 }

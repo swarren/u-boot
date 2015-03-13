@@ -52,8 +52,8 @@ static int wait_for_bit(void *reg, const uint32_t mask, bool set)
 		udelay(1);
 	}
 
-	debug("%s: Timeout (reg=%p mask=%08x wait_set=%i)\n",
-	      __func__, reg, mask, set);
+	printf("%s: Timeout (reg=%p mask=%08x wait_set=%i)\n",
+		__func__, reg, mask, set);
 
 	return -ETIMEDOUT;
 }
@@ -717,7 +717,7 @@ int wait_for_chhltd(uint32_t *sub, int *toggle)
 
 	hcint = readl(&hc_regs->hcint);
 	if (hcint != hcint_comp_hlt_ack) {
-		debug("%s: Error (HCINT=%08x)\n", __func__, hcint);
+		printf("%s: Error (HCINT=%08x)\n", __func__, hcint);
 		return -EINVAL;
 	}
 
@@ -807,14 +807,17 @@ int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 		}
 
 		if (in) {
+			if (sub > xfer_len)
+				printf("DWC2: sub 0x%08x xfer_len 0x%08x\n", sub, xfer_len);
 			xfer_len -= sub;
+			if (done + xfer_len > len)
+				printf("DWC2: done: 0x%08x xfer_len 0x%08x len 0x%08x\n", done, xfer_len, len);
 			memcpy(buffer + done, aligned_buffer, xfer_len);
 			if (sub)
 				stop_transfer = 1;
 		}
 
 		done += xfer_len;
-
 	} while ((done < len) && !stop_transfer);
 
 	writel(0, &hc_regs->hcintmsk);

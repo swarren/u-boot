@@ -102,7 +102,9 @@ void lcd_ctrl_init(void *lcdbase)
 	panel_info.vl_row = h;
 	panel_info.vl_bpix = LCD_COLOR16;
 
+#ifdef CONFIG_LCD
 	gd->fb_base = msg_setup->allocate_buffer.body.resp.fb_address;
+#endif
 }
 
 void lcd_enable(void)
