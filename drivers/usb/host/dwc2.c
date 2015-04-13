@@ -715,21 +715,65 @@ static int dwc2_eptype[] = {
 	DWC2_HCCHAR_EPTYPE_BULK,
 };
 
-int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
-	      void *buffer, int len, bool ignore_ack)
+int exec_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
+	     void *buffer, int len, bool ignore_ack, int max,
+	     uint32_t xfer_len, uint32_t num_packets, uint32_t *sub)
 {
 	struct dwc2_hc_regs *hc_regs = &regs->hc_regs[DWC2_HC_CHANNEL];
 	int devnum = usb_pipedevice(pipe);
 	int ep = usb_pipeendpoint(pipe);
-	int max = usb_maxpacket(dev, pipe);
 	int eptype = dwc2_eptype[usb_pipetype(pipe)];
+	uint32_t hcchar;
+
+	/* Clear old interrupt conditions for this host channel. */
+	writel(0x3fff, &hc_regs->hcint);
+
+	/*
+	* Program the HCCHARn register with the endpoint characteristics
+	* for the current transfer.
+	*/
+	hcchar = (devnum << DWC2_HCCHAR_DEVADDR_OFFSET) |
+		 (ep << DWC2_HCCHAR_EPNUM_OFFSET) |
+		 (in << DWC2_HCCHAR_EPDIR_OFFSET) |
+		 (eptype << DWC2_HCCHAR_EPTYPE_OFFSET) |
+		 (max << DWC2_HCCHAR_MPS_OFFSET);
+
+	if (dev->speed == USB_SPEED_LOW)
+		hcchar |= DWC2_HCCHAR_LSPDDEV;
+
+	writel(hcchar, &hc_regs->hcchar);
+
+	/* Program the HCSPLIT register; no SPLITs at present */
+	writel(0, &hc_regs->hcsplt);
+
+	writel((xfer_len << DWC2_HCTSIZ_XFERSIZE_OFFSET) |
+		(num_packets << DWC2_HCTSIZ_PKTCNT_OFFSET) |
+		(*pid << DWC2_HCTSIZ_PID_OFFSET),
+		&hc_regs->hctsiz);
+
+	writel(phys_to_bus((unsigned long)aligned_buffer),
+		&hc_regs->hcdma);
+
+	/* Set host channel enable after all other setup is complete. */
+	clrsetbits_le32(&hc_regs->hcchar, DWC2_HCCHAR_MULTICNT_MASK |
+			DWC2_HCCHAR_CHEN | DWC2_HCCHAR_CHDIS,
+			(1 << DWC2_HCCHAR_MULTICNT_OFFSET) |
+			DWC2_HCCHAR_CHEN);
+
+	return wait_for_chhltd(sub, pid, ignore_ack);
+}
+
+int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
+	      void *buffer, int len, bool ignore_ack)
+{
+	struct dwc2_hc_regs *hc_regs = &regs->hc_regs[DWC2_HC_CHANNEL];
+	int max = usb_maxpacket(dev, pipe);
 	int done = 0;
 	int ret = 0;
 	uint32_t sub;
 	uint32_t xfer_len;
 	uint32_t num_packets;
 	int stop_transfer = 0;
-	uint32_t hcchar;
 
 	debug("%s: msg: pipe %lx pid %d in %d len %d\n", __func__, pipe, *pid,
 	      in, len);
@@ -761,43 +805,9 @@ int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 		if (!in)
 			memcpy(aligned_buffer, (char *)buffer + done, len);
 
-		/* Clear old interrupt conditions for this host channel. */
-		writel(0x3fff, &hc_regs->hcint);
-
-		/*
-		* Program the HCCHARn register with the endpoint characteristics
-		* for the current transfer.
-		*/
-		hcchar = (devnum << DWC2_HCCHAR_DEVADDR_OFFSET) |
-			 (ep << DWC2_HCCHAR_EPNUM_OFFSET) |
-			 (in << DWC2_HCCHAR_EPDIR_OFFSET) |
-			 (eptype << DWC2_HCCHAR_EPTYPE_OFFSET) |
-			 (max << DWC2_HCCHAR_MPS_OFFSET);
-
-		if (dev->speed == USB_SPEED_LOW)
-			hcchar |= DWC2_HCCHAR_LSPDDEV;
-
-		writel(hcchar, &hc_regs->hcchar);
-
-		/* Program the HCSPLIT register; no SPLITs at present */
-		writel(0, &hc_regs->hcsplt);
-
-		writel((xfer_len << DWC2_HCTSIZ_XFERSIZE_OFFSET) |
-		       (num_packets << DWC2_HCTSIZ_PKTCNT_OFFSET) |
-		       (*pid << DWC2_HCTSIZ_PID_OFFSET),
-		       &hc_regs->hctsiz);
-
-		writel(phys_to_bus((unsigned long)aligned_buffer),
-		       &hc_regs->hcdma);
-
-		/* Set host channel enable after all other setup is complete. */
-		clrsetbits_le32(&hc_regs->hcchar, DWC2_HCCHAR_MULTICNT_MASK |
-				DWC2_HCCHAR_CHEN | DWC2_HCCHAR_CHDIS,
-				(1 << DWC2_HCCHAR_MULTICNT_OFFSET) |
-				DWC2_HCCHAR_CHEN);
-
-		ret = wait_for_chhltd(&sub, pid, ignore_ack);
-		if (ret)
+		ret = exec_msg(dev, pipe, pid, in, buffer, len, ignore_ack,
+			       max, xfer_len, num_packets, &sub);
+		if (ret < 0)
 			break;
 
 		if (in) {
