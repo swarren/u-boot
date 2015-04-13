@@ -389,42 +389,6 @@ static void dwc_otg_core_init(struct dwc2_core_regs *regs)
 }
 
 /*
- * Prepares a host channel for transferring packets to/from a specific
- * endpoint. The HCCHARn register is set up with the characteristics specified
- * in _hc. Host channel interrupts that may need to be serviced while this
- * transfer is in progress are enabled.
- *
- * @param regs Programming view of DWC_otg controller
- * @param hc Information needed to initialize the host channel
- */
-static void dwc_otg_hc_init(struct dwc2_core_regs *regs, uint8_t hc_num,
-		struct usb_device *dev, uint8_t dev_addr, uint8_t ep_num,
-		uint8_t ep_is_in, uint8_t ep_type, uint16_t max_packet)
-{
-	struct dwc2_hc_regs *hc_regs = &regs->hc_regs[hc_num];
-	uint32_t hcchar = (dev_addr << DWC2_HCCHAR_DEVADDR_OFFSET) |
-			  (ep_num << DWC2_HCCHAR_EPNUM_OFFSET) |
-			  (ep_is_in << DWC2_HCCHAR_EPDIR_OFFSET) |
-			  (ep_type << DWC2_HCCHAR_EPTYPE_OFFSET) |
-			  (max_packet << DWC2_HCCHAR_MPS_OFFSET);
-
-	if (dev->speed == USB_SPEED_LOW)
-		hcchar |= DWC2_HCCHAR_LSPDDEV;
-
-	/* Clear old interrupt conditions for this host channel. */
-	writel(0x3fff, &hc_regs->hcint);
-
-	/*
-	 * Program the HCCHARn register with the endpoint characteristics
-	 * for the current transfer.
-	 */
-	writel(hcchar, &hc_regs->hcchar);
-
-	/* Program the HCSPLIT register for SPLITs */
-	writel(0, &hc_regs->hcsplt);
-}
-
-/*
  * DWC2 to USB API interface
  */
 /* Direction: In ; Request: Status */
@@ -765,6 +729,7 @@ int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 	uint32_t xfer_len;
 	uint32_t num_packets;
 	int stop_transfer = 0;
+	uint32_t hcchar;
 
 	debug("%s: msg: pipe %lx pid %d in %d len %d\n", __func__, pipe, *pid,
 	      in, len);
@@ -796,9 +761,26 @@ int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 		if (!in)
 			memcpy(aligned_buffer, (char *)buffer + done, len);
 
-		/* Initialize channel */
-		dwc_otg_hc_init(regs, DWC2_HC_CHANNEL, dev, devnum, ep, in,
-				eptype, max);
+		/* Clear old interrupt conditions for this host channel. */
+		writel(0x3fff, &hc_regs->hcint);
+
+		/*
+		* Program the HCCHARn register with the endpoint characteristics
+		* for the current transfer.
+		*/
+		hcchar = (devnum << DWC2_HCCHAR_DEVADDR_OFFSET) |
+			 (ep << DWC2_HCCHAR_EPNUM_OFFSET) |
+			 (in << DWC2_HCCHAR_EPDIR_OFFSET) |
+			 (eptype << DWC2_HCCHAR_EPTYPE_OFFSET) |
+			 (max << DWC2_HCCHAR_MPS_OFFSET);
+
+		if (dev->speed == USB_SPEED_LOW)
+			hcchar |= DWC2_HCCHAR_LSPDDEV;
+
+		writel(hcchar, &hc_regs->hcchar);
+
+		/* Program the HCSPLIT register; no SPLITs at present */
+		writel(0, &hc_regs->hcsplt);
 
 		writel((xfer_len << DWC2_HCTSIZ_XFERSIZE_OFFSET) |
 		       (num_packets << DWC2_HCTSIZ_PKTCNT_OFFSET) |
