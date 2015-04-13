@@ -689,6 +689,8 @@ int wait_for_chhltd(uint32_t *sub, int *toggle, bool ignore_ack)
 	hcint = readl(&hc_regs->hcint);
 	if (hcint & (DWC2_HCINT_NAK | DWC2_HCINT_FRMOVRUN))
 		return -EAGAIN;
+	if (hcint & DWC2_HCINT_NYET)
+		return -EBUSY;
 	if (ignore_ack)
 		hcint &= ~DWC2_HCINT_ACK;
 	else
@@ -717,7 +719,8 @@ static int dwc2_eptype[] = {
 
 int exec_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 	     void *buffer, int len, bool ignore_ack, int max,
-	     uint32_t xfer_len, uint32_t num_packets, uint32_t *sub)
+	     uint32_t xfer_len, uint32_t num_packets, uint32_t *sub,
+	     uint32_t hcsplt)
 {
 	struct dwc2_hc_regs *hc_regs = &regs->hc_regs[DWC2_HC_CHANNEL];
 	int devnum = usb_pipedevice(pipe);
@@ -743,8 +746,8 @@ int exec_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 
 	writel(hcchar, &hc_regs->hcchar);
 
-	/* Program the HCSPLIT register; no SPLITs at present */
-	writel(0, &hc_regs->hcsplt);
+	/* Program the HCSPLIT register */
+	writel(hcsplt, &hc_regs->hcsplt);
 
 	writel((xfer_len << DWC2_HCTSIZ_XFERSIZE_OFFSET) |
 		(num_packets << DWC2_HCTSIZ_PKTCNT_OFFSET) |
@@ -761,6 +764,79 @@ int exec_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 			DWC2_HCCHAR_CHEN);
 
 	return wait_for_chhltd(sub, pid, ignore_ack);
+}
+
+uint32_t gen_hcsplt(struct usb_device *dev)
+{
+	// TODO: Check hub and port address number formats.
+	// TODO: Check ->portnr is actually filled in correctly.
+#if 1
+	// This path doesn't work for port in 0..4. This always yields "USB
+	// device not accepting new address". Not sure why. Perhaps set
+	// address doesn't need splits?
+	if (dev->devnum != 3)
+		return 0;
+
+	return DWC2_HCSPLT_SPLTENA |
+		(2 << DWC2_HCSPLT_HUBADDR_OFFSET) |
+		(4 << DWC2_HCSPLT_PRTADDR_OFFSET);
+#else
+	// This path doesn't work; at the very least, the hub code appears to
+	// say that every device is HS, even when they're really LS/FS.
+	struct usb_device *devp;
+
+	if (dev->speed == USB_SPEED_HIGH)
+		return 0;
+
+	devp = dev;
+	for (;;) {
+		devp = devp->parent;
+		if (devp->devnum == 1)
+			return 0;
+		if (devp->speed != USB_SPEED_HIGH)
+			continue;
+		return DWC2_HCSPLT_SPLTENA |
+			(devp->devnum << DWC2_HCSPLT_HUBADDR_OFFSET) |
+			(dev->portnr << DWC2_HCSPLT_PRTADDR_OFFSET);
+	}
+#endif
+}
+
+int split_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
+	      void *buffer, int len, bool ignore_ack, int max,
+	      uint32_t xfer_len, uint32_t num_packets, uint32_t *sub)
+{
+	uint32_t hcsplt;
+	unsigned long timeout;
+	int ret;
+
+	hcsplt = gen_hcsplt(dev);
+
+	timeout = get_timer(0) + USB_TIMEOUT_MS(pipe);
+
+	ret = exec_msg(dev, pipe, pid, in, buffer, len, ignore_ack, max,
+		       xfer_len, num_packets, sub, hcsplt);
+	if (ret)
+		return ret;
+
+	if (!hcsplt)
+		return 0;
+
+	// FIXME: Does SPLTENA need to be set always? Check kernel.
+	hcsplt &= ~DWC2_HCSPLT_SPLTENA;
+	hcsplt |= DWC2_HCSPLT_COMPSPLT;
+
+	for (;;) {
+		if (get_timer(0) > timeout) {
+			printf("Timeout poll on interrupt endpoint\n");
+			return -ETIMEDOUT;
+		}
+		ret = exec_msg(dev, pipe, pid, in, buffer, len, ignore_ack,
+			       max, xfer_len, num_packets, sub, hcsplt);
+		if (ret == -EBUSY)
+			continue;
+		return ret;
+	}
 }
 
 int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
@@ -805,8 +881,8 @@ int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 		if (!in)
 			memcpy(aligned_buffer, (char *)buffer + done, len);
 
-		ret = exec_msg(dev, pipe, pid, in, buffer, len, ignore_ack,
-			       max, xfer_len, num_packets, &sub);
+		ret = split_msg(dev, pipe, pid, in, buffer, len, ignore_ack,
+			        max, xfer_len, num_packets, &sub);
 		if (ret < 0)
 			break;
 
