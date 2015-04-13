@@ -770,10 +770,6 @@ int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 	      in, len);
 
 	do {
-		/* Initialize channel */
-		dwc_otg_hc_init(regs, DWC2_HC_CHANNEL, dev, devnum, ep, in,
-				eptype, max);
-
 		xfer_len = len - done;
 		if (xfer_len > CONFIG_DWC2_MAX_TRANSFER_SIZE)
 			xfer_len = CONFIG_DWC2_MAX_TRANSFER_SIZE - max + 1;
@@ -797,13 +793,17 @@ int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 		debug("%s: chunk: pid %d xfer_len %u pkts %u\n", __func__,
 		      *pid, xfer_len, num_packets);
 
+		if (!in)
+			memcpy(aligned_buffer, (char *)buffer + done, len);
+
+		/* Initialize channel */
+		dwc_otg_hc_init(regs, DWC2_HC_CHANNEL, dev, devnum, ep, in,
+				eptype, max);
+
 		writel((xfer_len << DWC2_HCTSIZ_XFERSIZE_OFFSET) |
 		       (num_packets << DWC2_HCTSIZ_PKTCNT_OFFSET) |
 		       (*pid << DWC2_HCTSIZ_PID_OFFSET),
 		       &hc_regs->hctsiz);
-
-		if (!in)
-			memcpy(aligned_buffer, (char *)buffer + done, len);
 
 		writel(phys_to_bus((unsigned long)aligned_buffer),
 		       &hc_regs->hcdma);
