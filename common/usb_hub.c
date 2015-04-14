@@ -1,3 +1,5 @@
+#define DEBUG
+
 /*
  * Most of this source has been derived from the Linux USB
  * project:

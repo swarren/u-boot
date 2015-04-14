@@ -1,3 +1,5 @@
+#define DEBUG
+
 /*
  * Copyright (C) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (C) 2014 Marek Vasut <marex@denx.de>
@@ -675,7 +677,7 @@ static int dwc_otg_submit_rh_msg(struct usb_device *dev, unsigned long pipe,
 	return stat;
 }
 
-int wait_for_chhltd(uint32_t *sub, int *toggle, bool ignore_ack)
+int wait_for_chhltd(uint32_t *sub, int *toggle, bool ignore_ack, bool force_xfercomp)
 {
 	uint32_t hcint_comp_hlt_ack = DWC2_HCINT_XFERCOMP | DWC2_HCINT_CHHLTD;
 	struct dwc2_hc_regs *hc_regs = &regs->hc_regs[DWC2_HC_CHANNEL];
@@ -687,14 +689,22 @@ int wait_for_chhltd(uint32_t *sub, int *toggle, bool ignore_ack)
 		return ret;
 
 	hcint = readl(&hc_regs->hcint);
-	if (hcint & (DWC2_HCINT_NAK | DWC2_HCINT_FRMOVRUN))
+	if (hcint & (DWC2_HCINT_NAK | DWC2_HCINT_FRMOVRUN)) {
+		debug("-> NAK/FRMOVRUN\n");
 		return -EAGAIN;
-	if (hcint & DWC2_HCINT_NYET)
+	}
+	if (hcint & DWC2_HCINT_NYET) {
+		debug("-> NYET\n");
 		return -EBUSY;
+	}
 	if (ignore_ack)
 		hcint &= ~DWC2_HCINT_ACK;
 	else
 		hcint_comp_hlt_ack |= DWC2_HCINT_ACK;
+	// FIXME: ssplit doesn't set this. cplit probably does
+	// We should take a mask/value instead of lots of flags
+	if (force_xfercomp)
+		hcint |= DWC2_HCINT_XFERCOMP;
 	if (hcint != hcint_comp_hlt_ack) {
 		debug("%s: Error (HCINT=%08x)\n", __func__, hcint);
 		return -EINVAL;
@@ -763,30 +773,27 @@ int exec_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 			(1 << DWC2_HCCHAR_MULTICNT_OFFSET) |
 			DWC2_HCCHAR_CHEN);
 
-	return wait_for_chhltd(sub, pid, ignore_ack);
+	return wait_for_chhltd(sub, pid, ignore_ack, !!hcsplt);
 }
 
 uint32_t gen_hcsplt(struct usb_device *dev)
 {
-	// TODO: Check hub and port address number formats.
-	// TODO: Check ->portnr is actually filled in correctly.
-#if 1
-	// This path doesn't work for port in 0..4. This always yields "USB
-	// device not accepting new address". Not sure why. Perhaps set
-	// address doesn't need splits?
-	if (dev->devnum != 3)
+#if 0
+	struct usb_device *devp;
+#endif
+
+	if (dev->speed == USB_SPEED_HIGH)
 		return 0;
+
+#if 1
+	printf("hcsplt: MATCH\n");
 
 	return DWC2_HCSPLT_SPLTENA |
 		(2 << DWC2_HCSPLT_HUBADDR_OFFSET) |
 		(4 << DWC2_HCSPLT_PRTADDR_OFFSET);
 #else
-	// This path doesn't work; at the very least, the hub code appears to
-	// say that every device is HS, even when they're really LS/FS.
-	struct usb_device *devp;
-
-	if (dev->speed == USB_SPEED_HIGH)
-		return 0;
+	// TODO: Check hub and port address number formats.
+	// TODO: Check ->portnr is actually filled in correctly.
 
 	devp = dev;
 	for (;;) {
@@ -811,6 +818,10 @@ int split_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 	int ret;
 
 	hcsplt = gen_hcsplt(dev);
+	if (hcsplt) {
+		debug("Start split:\n");
+		ignore_ack = true;
+	}
 
 	timeout = get_timer(0) + USB_TIMEOUT_MS(pipe);
 
@@ -823,7 +834,7 @@ int split_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 		return 0;
 
 	// FIXME: Does SPLTENA need to be set always? Check kernel.
-	hcsplt &= ~DWC2_HCSPLT_SPLTENA;
+	//hcsplt &= ~DWC2_HCSPLT_SPLTENA;
 	hcsplt |= DWC2_HCSPLT_COMPSPLT;
 
 	for (;;) {
@@ -831,6 +842,8 @@ int split_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 			printf("Timeout poll on interrupt endpoint\n");
 			return -ETIMEDOUT;
 		}
+		if (hcsplt)
+			debug("Complete split:\n");
 		ret = exec_msg(dev, pipe, pid, in, buffer, len, ignore_ack,
 			       max, xfer_len, num_packets, sub, hcsplt);
 		if (ret == -EBUSY)
@@ -851,6 +864,7 @@ int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 	uint32_t num_packets;
 	int stop_transfer = 0;
 
+	// FIXME: Replicate this message in split_msg/exec_msg
 	debug("%s: msg: pipe %lx pid %d in %d len %d\n", __func__, pipe, *pid,
 	      in, len);
 
@@ -860,6 +874,10 @@ int chunk_msg(struct usb_device *dev, unsigned long pipe, int *pid, int in,
 			xfer_len = CONFIG_DWC2_MAX_TRANSFER_SIZE - max + 1;
 		if (xfer_len > DWC2_DATA_BUF_SIZE)
 			xfer_len = DWC2_DATA_BUF_SIZE - max + 1;
+
+// Limit on split transaction size??
+if ((dev->devnum == 4) && (xfer_len > 8))
+	xfer_len = 8;
 
 		/* Make sure that xfer_len is a multiple of max packet size. */
 		if (xfer_len > 0) {

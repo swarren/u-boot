@@ -1,3 +1,5 @@
+#define DEBUG
+
 /*
  * (C) Copyright 2001
  * Denis Peter, MPL AG Switzerland
