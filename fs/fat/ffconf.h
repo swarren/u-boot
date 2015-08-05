@@ -1,3 +1,5 @@
+#include <config.h>
+
 /*---------------------------------------------------------------------------/
 /  FatFs - FAT file system module configuration file  R0.11a (C)ChaN, 2015
 /---------------------------------------------------------------------------*/
@@ -8,7 +10,11 @@
 / Function Configurations
 /---------------------------------------------------------------------------*/
 
+#ifdef CONFIG_FAT_WRITE
 #define _FS_READONLY	0
+#else
+#define _FS_READONLY	1
+#endif
 /* This option switches read-only configuration. (0:Read/Write or 1:Read-only)
 /  Read-only configuration removes writing API functions, f_write(), f_sync(),
 /  f_unlink(), f_mkdir(), f_chmod(), f_rename(), f_truncate(), f_getfree()
@@ -47,7 +53,7 @@
 /* This option switches fast seek feature. (0:Disable or 1:Enable) */
 
 
-#define _USE_LABEL		0
+#define _USE_LABEL		1
 /* This option switches volume label functions, f_getlabel() and f_setlabel().
 /  (0:Disable or 1:Enable) */
 
@@ -90,7 +96,7 @@
 */
 
 
-#define	_USE_LFN	0
+#define	_USE_LFN	1
 #define	_MAX_LFN	255
 /* The _USE_LFN option switches the LFN feature.
 /
@@ -124,7 +130,7 @@
 /  When _LFN_UNICODE is 0, this option has no effect. */
 
 
-#define _FS_RPATH	0
+#define _FS_RPATH	1
 /* This option configures relative path feature.
 /
 /   0: Disable relative path feature and remove related functions.
@@ -200,7 +206,7 @@
 /  data transfer. */
 
 
-#define _FS_NORTC	0
+#define _FS_NORTC	1
 #define _NORTC_MON	1
 #define _NORTC_MDAY	1
 #define _NORTC_YEAR	2015
