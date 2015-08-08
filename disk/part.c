@@ -180,6 +180,9 @@ void dev_print (block_dev_desc_t *dev_desc)
 	case IF_TYPE_DOC:
 		puts("device type DOC\n");
 		return;
+	case IF_TYPE_HOST:
+		puts("host device\n");
+		break;
 	case IF_TYPE_UNKNOWN:
 		puts("device type unknown\n");
 		return;
