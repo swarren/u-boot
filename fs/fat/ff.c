@@ -1374,6 +1374,7 @@ void fit_lfn (
 /*-----------------------------------------------------------------------*/
 /* Create numbered name                                                  */
 /*-----------------------------------------------------------------------*/
+#if !_FS_READONLY
 #if _USE_LFN
 static
 void gen_numname (
@@ -1425,6 +1426,7 @@ void gen_numname (
 		dst[j++] = (i < 8) ? ns[i++] : ' ';
 	} while (j < 8);
 }
+#endif
 #endif
 
 
