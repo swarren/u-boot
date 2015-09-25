@@ -27,6 +27,7 @@ static unsigned long host_block_read(int dev, unsigned long start,
 {
 	struct host_block_dev *host_dev = find_host_device(dev);
 
+	printf("HOST READ %08lx +%08lx\n", (unsigned long)start, (unsigned long)blkcnt);
 	if (!host_dev)
 		return -1;
 	if (os_lseek(host_dev->fd,
@@ -46,6 +47,8 @@ static unsigned long host_block_write(int dev, unsigned long start,
 				      lbaint_t blkcnt, const void *buffer)
 {
 	struct host_block_dev *host_dev = find_host_device(dev);
+
+	printf("HOST WRITE %08lx +%08lx\n", (unsigned long)start, (unsigned long)blkcnt);
 	if (os_lseek(host_dev->fd,
 		     start * host_dev->blk_dev.blksz,
 		     OS_SEEK_SET) == -1) {
