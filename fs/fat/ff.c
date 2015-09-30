@@ -2593,7 +2593,7 @@ FRESULT f_read (
 )
 {
 	FRESULT res;
-	DWORD clst, sect, remain;
+	DWORD clst, sect, remain, cfptr, cclst, maxclust;
 	UINT rcnt, cc;
 	BYTE csect, *rbuff = (BYTE*)buff;
 
@@ -2614,27 +2614,46 @@ FRESULT f_read (
 		if ((fp->fptr % SS(fp->fs)) == 0) {		/* On the sector boundary? */
 			csect = (BYTE)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));	/* Sector offset in the cluster */
 			if (!csect) {						/* On the cluster boundary? */
-				if (fp->fptr == 0) {			/* On the top of the file? */
-					clst = fp->sclust;			/* Follow from the origin */
-				} else {						/* Middle or end of the file */
+				maxclust = 0;
+				cfptr = fp->fptr;
+				cclst = fp->clust;
+				for (;;) {
+					if (cfptr == 0) {			/* On the top of the file? */
+						clst = fp->sclust;			/* Follow from the origin */
+					} else {						/* Middle or end of the file */
 #if _USE_FASTSEEK
-					if (fp->cltbl)
-						clst = clmt_clust(fp, fp->fptr);	/* Get cluster# from the CLMT */
-					else
+						if (fp->cltbl)
+							clst = clmt_clust(fp, cfptr);	/* Get cluster# from the CLMT */
+						else
 #endif
-						clst = get_fat(fp->fs, fp->clust);	/* Follow cluster chain on the FAT */
+							clst = get_fat(fp->fs, cclst);	/* Follow cluster chain on the FAT */
+					}
+					if (clst < 2) ABORT(fp->fs, FR_INT_ERR);
+					if (clst == 0xFFFFFFFF) ABORT(fp->fs, FR_DISK_ERR);
+					if (!maxclust) {
+						fp->clust = clst;				/* Update current cluster */
+					} else {
+						if (clst != (cclst + 1))
+							break;
+					}
+					maxclust++;
+					if ((maxclust * fp->fs->csize * SS(fp->fs)) >= btr)
+						break;
+					cclst = clst;
+					cfptr += fp->fs->csize * SS(fp->fs);
 				}
-				if (clst < 2) ABORT(fp->fs, FR_INT_ERR);
-				if (clst == 0xFFFFFFFF) ABORT(fp->fs, FR_DISK_ERR);
-				fp->clust = clst;				/* Update current cluster */
+			} else {
+				maxclust = 1;
 			}
 			sect = clust2sect(fp->fs, fp->clust);	/* Get current sector */
+			if (maxclust > 1)
+				fp->clust += (maxclust - 1);
 			if (!sect) ABORT(fp->fs, FR_INT_ERR);
 			sect += csect;
 			cc = btr / SS(fp->fs);				/* When remaining bytes >= sector size, */
 			if (cc) {							/* Read maximum contiguous sectors directly */
-				if (csect + cc > fp->fs->csize)	/* Clip at cluster boundary */
-					cc = fp->fs->csize - csect;
+				if (csect + cc > (fp->fs->csize * maxclust))	/* Clip at cluster boundary */
+					cc = (fp->fs->csize * maxclust) - csect;
 				if (disk_read(fp->fs->drv, rbuff, sect, cc) != RES_OK)
 					ABORT(fp->fs, FR_DISK_ERR);
 #if !_FS_READONLY && _FS_MINIMIZE <= 2			/* Replace one of the read sectors with cached data if it contains a dirty sector */
