@@ -387,8 +387,32 @@ static void __syntax(char *file, int line) {
 #endif
 
 #ifdef __U_BOOT__
+#if 0
 static void *xmalloc(size_t size);
 static void *xrealloc(void *ptr, size_t size);
+#else
+static inline void *xmalloc(size_t size)
+{
+	void *p = NULL;
+
+	if (!(p = malloc(size))) {
+	    printf("ERROR : memory not allocated\n");
+	    for(;;);
+	}
+	return p;
+}
+
+static inline void *xrealloc(void *ptr, size_t size)
+{
+	void *p = NULL;
+
+	if (!(p = realloc(ptr, size))) {
+	    printf("ERROR : memory not allocated\n");
+	    for(;;);
+	}
+	return p;
+}
+#endif
 #else
 /* Index of subroutines: */
 /*   function prototypes for builtins */
@@ -3310,6 +3334,7 @@ int u_boot_hush_start(void)
 	return 0;
 }
 
+#if 0
 static void *xmalloc(size_t size)
 {
 	void *p = NULL;
@@ -3331,6 +3356,7 @@ static void *xrealloc(void *ptr, size_t size)
 	}
 	return p;
 }
+#endif
 #endif /* __U_BOOT__ */
 
 #ifndef __U_BOOT__

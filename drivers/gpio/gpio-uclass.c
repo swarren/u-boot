@@ -137,6 +137,11 @@ int dm_gpio_request(struct gpio_desc *desc, const char *label)
 	uc_priv = dev_get_uclass_priv(dev);
 	if (uc_priv->name[desc->offset])
 		return -EBUSY;
+	// Replacing the strdup with this makes "dfu" work twice in a row.
+	// malloc heap fragmentation, or does this allocation leak?
+	// This allocation happens /after/ the DFU allocation that fails the
+	// second time round, so leak isn't relevant -> look at fragmentation.
+	// str = "moo";
 	str = strdup(label);
 	if (!str)
 		return -ENOMEM;

@@ -283,6 +283,8 @@ char * strdup(const char *s)
 {
 	char *new;
 
+	printf("strdup '%s'from %p\n", s, __builtin_return_address(0));
+
 	if ((s == NULL)	||
 	    ((new = malloc (strlen(s) + 1)) == NULL) ) {
 		return NULL;

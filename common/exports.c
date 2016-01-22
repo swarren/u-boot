@@ -1,4 +1,5 @@
 #include <common.h>
+#include <malloc.h>
 #include <exports.h>
 #include <spi.h>
 #include <i2c.h>

@@ -10,6 +10,7 @@
 import os
 import os.path
 import pytest
+import time
 import u_boot_utils
 
 '''
@@ -50,6 +51,8 @@ device.)
 # as one less than, equal to, and one greater than typical USB max packet
 # sizes, and similar boundary conditions.
 test_sizes = (
+)
+xxx = (
     64 - 1,
     64,
     64 + 1,
@@ -108,10 +111,13 @@ def test_dfu(u_boot_console, env__usb_dev_port, env__dfu_config):
 
         cmd = 'dfu 0 ' + env__dfu_config['cmd_params']
         u_boot_console.run_command(cmd, wait_for_prompt=False)
+
         u_boot_console.log.action('Waiting for DFU USB device to appear')
         fh = u_boot_utils.wait_until_open_succeeds(
             env__usb_dev_port['host_usb_dev_node'])
         fh.close()
+        time.sleep(0.5)
+        u_boot_console.wait_for('in use bytes')
 
     def stop_dfu(ignore_errors):
         '''Stop U-Boot's dfu shell command from executing.
