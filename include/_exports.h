@@ -22,7 +22,6 @@
 	EXPORT_FUNC(dummy, void, install_hdlr, void)
 	EXPORT_FUNC(dummy, void, free_hdlr, void)
 #endif
-	EXPORT_FUNC(malloc, void *, malloc, size_t)
 #if !CONFIG_IS_ENABLED(SYS_MALLOC_SIMPLE)
 	EXPORT_FUNC(free, void, free, void *)
 #endif

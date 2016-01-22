@@ -387,8 +387,32 @@ static void __syntax(char *file, int line) {
 #endif
 
 #ifdef __U_BOOT__
+#if 0
 static void *xmalloc(size_t size);
 static void *xrealloc(void *ptr, size_t size);
+#else
+static inline void *xmalloc(size_t size)
+{
+	void *p = NULL;
+
+	if (!(p = malloc(size))) {
+	    printf("ERROR : memory not allocated\n");
+	    for(;;);
+	}
+	return p;
+}
+
+static inline void *xrealloc(void *ptr, size_t size)
+{
+	void *p = NULL;
+
+	if (!(p = realloc(ptr, size))) {
+	    printf("ERROR : memory not allocated\n");
+	    for(;;);
+	}
+	return p;
+}
+#endif
 #else
 /* Index of subroutines: */
 /*   function prototypes for builtins */
@@ -2535,7 +2559,7 @@ uint32_t  check_pi_progs_val;
 void check_check_pi(const char *f, int l)
 {
 	uint32_t pi_val = *check_pi_progs_ptr;
-	if (pi_val != check_pi_progs_val)
+	if (check_pi_progs_ptr && (pi_val != check_pi_progs_val))
 		printf("%s:%d: pi->progs changed from %lx to %lx\n", f, l, check_pi_progs_val, pi_val);
 }
 
@@ -2569,7 +2593,7 @@ static int done_command(struct p_context *ctx)
 	printf("%s:%d: pi=%p pi->progs=%p\n", __func__, __LINE__, pi, pi->progs);
 	pi->progs = xrealloc(pi->progs, sizeof(*pi->progs) * (pi->num_progs+1));
 	printf("%s:%d: pi=%p pi->progs=%p\n", __func__, __LINE__, pi, pi->progs);
-	if (pi == 0xfda5b048) {
+	if (pi == 0xfda5e048) {
 		check_pi_progs_ptr = &(pi->progs);
 		check_pi_progs_val = pi->progs;
 	}
@@ -3339,6 +3363,7 @@ int u_boot_hush_start(void)
 	return 0;
 }
 
+#if 0
 static void *xmalloc(size_t size)
 {
 	void *p = NULL;
@@ -3360,6 +3385,7 @@ static void *xrealloc(void *ptr, size_t size)
 	}
 	return p;
 }
+#endif
 #endif /* __U_BOOT__ */
 
 #ifndef __U_BOOT__

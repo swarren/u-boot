@@ -19,6 +19,9 @@
 #include <usb.h>
 #include <net.h>
 
+void malloc_stats(void);
+void malloc_dump(void);
+
 static int do_dfu(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	bool dfu_reset = false;
@@ -40,6 +43,8 @@ static int do_dfu(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		return update_tftp(addr, interface, devstring);
 	}
 #endif
+
+	malloc_stats();
 
 	ret = dfu_init_env_entities(interface, devstring);
 	if (ret)
@@ -93,6 +98,8 @@ done:
 
 	g_dnl_clear_detach();
 
+	malloc_stats();
+
 	return ret;
 }
 
@@ -110,4 +117,15 @@ U_BOOT_CMD(dfu, CONFIG_SYS_MAXARGS, 1, do_dfu,
 	"    <interface>\n"
 	"    [<addr>] - address where FIT image has been stored\n"
 #endif
+);
+
+static int do_malloc_dump(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	malloc_dump();
+	return 0;
+}
+
+U_BOOT_CMD(mallocdump, CONFIG_SYS_MAXARGS, 1, do_malloc_dump,
+	"Malloc dump",
+	"No arguments"
 );

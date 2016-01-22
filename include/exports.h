@@ -18,7 +18,6 @@ void puts(const char*);
 int printf(const char* fmt, ...);
 void install_hdlr(int, interrupt_handler_t, void*);
 void free_hdlr(int);
-void *malloc(size_t);
 #if !CONFIG_IS_ENABLED(SYS_MALLOC_SIMPLE)
 void free(void*);
 #endif

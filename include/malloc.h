@@ -893,10 +893,10 @@ void *realloc_simple(void *ptr, size_t size);
 # define mALLINFo	dlmallinfo
 # define mALLOPt		dlmallopt
 # else /* USE_DL_PREFIX */
-# define cALLOc		calloc
+# define cALLOc		callocx
 # define fREe		free
-# define mALLOc		malloc
-# define mEMALIGn	memalign
+# define mALLOc		mallocx
+# define mEMALIGn	memalignx
 # define rEALLOc		realloc
 # define vALLOc		valloc
 # define pvALLOc		pvalloc
@@ -904,6 +904,9 @@ void *realloc_simple(void *ptr, size_t size);
 # define mALLOPt		mallopt
 # endif /* USE_DL_PREFIX */
 
+#define malloc(a) mALLOc(a, __FILE__, __LINE__)
+#define memalign(a, b) mEMALIGn(a, b, __FILE__, __LINE__)
+#define calloc(a, b) cALLOc(a, b, __FILE__, __LINE__)
 #endif
 
 /* Set up pre-relocation malloc() ready for use */
@@ -916,13 +919,13 @@ void *malloc_simple(size_t size);
 
 # if __STD_C
 
-Void_t* mALLOc(size_t);
+Void_t* mALLOc(size_t, const char*, int);
 void    fREe(Void_t*);
 Void_t* rEALLOc(Void_t*, size_t);
-Void_t* mEMALIGn(size_t, size_t);
+Void_t* mEMALIGn(size_t, size_t, const char*, int);
 Void_t* vALLOc(size_t);
 Void_t* pvALLOc(size_t);
-Void_t* cALLOc(size_t, size_t);
+Void_t* cALLOc(size_t, size_t, const char*, int);
 void    cfree(Void_t*);
 int     malloc_trim(size_t);
 size_t  malloc_usable_size(Void_t*);
