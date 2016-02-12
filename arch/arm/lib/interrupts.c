@@ -121,6 +121,19 @@ void bad_mode (void)
 	reset_cpu (0);
 }
 
+static void hexdump(unsigned char *buf, int len)
+{
+	int i;
+
+	for (i = 0; i < len; i++) {
+		if ((i % 16) == 0)
+			printf("%s%08x: ", i ? "\n" : "",
+							(unsigned int)&buf[i]);
+		printf("%02x ", buf[i]);
+	}
+	printf("\n");
+}
+
 void show_regs (struct pt_regs *regs)
 {
 	unsigned long __maybe_unused flags;
@@ -161,6 +174,8 @@ void show_regs (struct pt_regs *regs)
 		fast_interrupts_enabled (regs) ? "on" : "off",
 		processor_modes[processor_mode (regs)],
 		thumb_mode (regs) ? " (T)" : "");
+	printf("stack:\n");
+	hexdump(regs->ARM_sp, 512);
 }
 
 void do_undefined_instruction (struct pt_regs *pt_regs)

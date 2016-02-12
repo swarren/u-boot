@@ -14,6 +14,9 @@
 #include <linux/mii.h>
 #include "usb_ether.h"
 
+extern void check_check_pi(const char *f, int l);
+#define PI_CHECK() check_check_pi(__FILE__, __LINE__)
+
 /* ASIX AX8817X based USB 2.0 Ethernet Devices */
 
 #define AX_CMD_SET_SW_MII		0x06
@@ -529,6 +532,7 @@ static int asix_recv(struct eth_device *eth)
 	int actual_len;
 	u32 packet_len;
 
+PI_CHECK();
 	debug("** %s()\n", __func__);
 
 	err = usb_bulk_msg(dev->pusb_dev,
@@ -541,10 +545,12 @@ static int asix_recv(struct eth_device *eth)
 		actual_len, err);
 	if (err != 0) {
 		debug("Rx: failed to receive\n");
+PI_CHECK();
 		return -1;
 	}
 	if (actual_len > AX_RX_URB_SIZE) {
 		debug("Rx: received too many bytes %d\n", actual_len);
+PI_CHECK();
 		return -1;
 	}
 
@@ -556,6 +562,7 @@ static int asix_recv(struct eth_device *eth)
 		 */
 		if (actual_len < sizeof(packet_len)) {
 			debug("Rx: incomplete packet length\n");
+PI_CHECK();
 			return -1;
 		}
 		memcpy(&packet_len, buf_ptr, sizeof(packet_len));
@@ -564,11 +571,13 @@ static int asix_recv(struct eth_device *eth)
 			debug("Rx: malformed packet length: %#x (%#x:%#x)\n",
 			      packet_len, (~packet_len >> 16) & 0x7ff,
 			      packet_len & 0x7ff);
+PI_CHECK();
 			return -1;
 		}
 		packet_len = packet_len & 0x7ff;
 		if (packet_len > actual_len - sizeof(packet_len)) {
 			debug("Rx: too large packet: %d\n", packet_len);
+PI_CHECK();
 			return -1;
 		}
 
@@ -589,6 +598,7 @@ static int asix_recv(struct eth_device *eth)
 		buf_ptr += sizeof(packet_len) + packet_len;
 	}
 
+PI_CHECK();
 	return err;
 }
 
@@ -772,7 +782,10 @@ int asix_eth_send(struct udevice *dev, void *packet, int length)
 {
 	struct asix_private *priv = dev_get_priv(dev);
 
-	return asix_send_common(&priv->ueth, packet, length);
+PI_CHECK();
+	int ret = asix_send_common(&priv->ueth, packet, length);
+PI_CHECK();
+	return ret;
 }
 
 int asix_eth_recv(struct udevice *dev, int flags, uchar **packetp)
@@ -783,18 +796,30 @@ int asix_eth_recv(struct udevice *dev, int flags, uchar **packetp)
 	int ret, len;
 	u32 packet_len;
 
+PI_CHECK();
 	len = usb_ether_get_rx_bytes(ueth, &ptr);
+PI_CHECK();
 	debug("%s: first try, len=%d\n", __func__, len);
 	if (!len) {
-		if (!(flags & ETH_RECV_CHECK_DEVICE))
+PI_CHECK();
+		if (!(flags & ETH_RECV_CHECK_DEVICE)) {
+PI_CHECK();
 			return -EAGAIN;
+		}
+PI_CHECK();
 		ret = usb_ether_receive(ueth, AX_RX_URB_SIZE);
-		if (ret == -EAGAIN)
+PI_CHECK(); // FIRST FAILURE
+		if (ret == -EAGAIN) {
+PI_CHECK();
 			return ret;
+		}
 
 		len = usb_ether_get_rx_bytes(ueth, &ptr);
+PI_CHECK();
 		debug("%s: second try, len=%d\n", __func__, len);
+PI_CHECK();
 	}
+PI_CHECK();
 
 	/*
 	 * 1st 4 bytes contain the length of the actual data as two
@@ -804,25 +829,35 @@ int asix_eth_recv(struct udevice *dev, int flags, uchar **packetp)
 		debug("Rx: incomplete packet length\n");
 		goto err;
 	}
+PI_CHECK();
 	memcpy(&packet_len, ptr, sizeof(packet_len));
+PI_CHECK();
 	le32_to_cpus(&packet_len);
+PI_CHECK();
 	if (((~packet_len >> 16) & 0x7ff) != (packet_len & 0x7ff)) {
 		debug("Rx: malformed packet length: %#x (%#x:%#x)\n",
 		      packet_len, (~packet_len >> 16) & 0x7ff,
 		      packet_len & 0x7ff);
+PI_CHECK();
 		goto err;
 	}
+PI_CHECK();
 	packet_len = packet_len & 0x7ff;
+PI_CHECK();
 	if (packet_len > len - sizeof(packet_len)) {
 		debug("Rx: too large packet: %d\n", packet_len);
+PI_CHECK();
 		goto err;
 	}
+PI_CHECK();
 
 	*packetp = ptr + sizeof(packet_len);
+PI_CHECK();
 	return packet_len;
 
 err:
 	usb_ether_advance_rxbuf(ueth, -1);
+PI_CHECK();
 	return -EINVAL;
 }
 
@@ -830,9 +865,11 @@ static int asix_free_pkt(struct udevice *dev, uchar *packet, int packet_len)
 {
 	struct asix_private *priv = dev_get_priv(dev);
 
+PI_CHECK();
 	if (packet_len & 1)
 		packet_len++;
 	usb_ether_advance_rxbuf(&priv->ueth, sizeof(u32) + packet_len);
+PI_CHECK();
 
 	return 0;
 }

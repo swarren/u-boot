@@ -1939,9 +1939,12 @@ static int free_pipe(struct pipe *pi, int indent)
 			globfree(&child->glob_result);
 #else
 			for (a = 0; a < child->argc; a++) {
+				printf("%s:%d: free(%p)\n", __func__, __LINE__, child->argv[a]);
 				free(child->argv[a]);
 			}
+			printf("%s:%d: free(%p)\n", __func__, __LINE__, child->argv);
 			free(child->argv);
+			printf("%s:%d: free(%p)\n", __func__, __LINE__, child->argv_nonnull);
 			free(child->argv_nonnull);
 			child->argc = 0;
 #endif
@@ -1968,13 +1971,17 @@ static int free_pipe(struct pipe *pi, int indent)
 				final_printf("&%d\n", r->dup);
 			}
 			rnext=r->next;
+			printf("%s:%d: free(%p)\n", __func__, __LINE__, r);
 			free(r);
 		}
 		child->redirects=NULL;
 #endif
 	}
+	printf("%s:%d: pi=%p pi->progs=%p\n", __func__, __LINE__, pi, pi->progs);
+	printf("%s:%d: free(%p)\n", __func__, __LINE__, pi->progs);
 	free(pi->progs);   /* children are an array, they get freed all at once */
 	pi->progs=NULL;
+	printf("%s:%d: pi=%p pi->progs=%p\n", __func__, __LINE__, pi, pi->progs);
 	return ret_code;
 }
 
@@ -1989,7 +1996,9 @@ static int free_pipe_list(struct pipe *head, int indent)
 		final_printf("%s pipe followup code %d\n", ind, pi->followup);
 		next=pi->next;
 		pi->next=NULL;
-		free(pi);
+		printf("%s:%d: free(%p)\n", __func__, __LINE__, pi);
+		//if (((unsigned int)pi) > 0xf0000000)
+			free(pi);
 	}
 	return rcode;
 }
@@ -2324,7 +2333,9 @@ static struct pipe *new_pipe(void)
 	struct pipe *pi;
 	pi = xmalloc(sizeof(struct pipe));
 	pi->num_progs = 0;
+	printf("%s:%d: pi=%p pi->progs=%p\n", __func__, __LINE__, pi, pi->progs);
 	pi->progs = NULL;
+	printf("%s:%d: pi=%p pi->progs=%p\n", __func__, __LINE__, pi, pi->progs);
 	pi->next = NULL;
 	pi->followup = 0;  /* invalid */
 	pi->r_mode = RES_NONE;
@@ -2516,6 +2527,18 @@ static int done_word(o_string *dest, struct p_context *ctx)
 	return 0;
 }
 
+extern void check_check_pi(const char *f, int l);
+#define PI_CHECK() check_check_pi(__FILE__, __LINE__)
+
+uint32_t *check_pi_progs_ptr;
+uint32_t  check_pi_progs_val;
+void check_check_pi(const char *f, int l)
+{
+	uint32_t pi_val = *check_pi_progs_ptr;
+	if (pi_val != check_pi_progs_val)
+		printf("%s:%d: pi->progs changed from %lx to %lx\n", f, l, check_pi_progs_val, pi_val);
+}
+
 /* The only possible error here is out of memory, in which case
  * xmalloc exits. */
 static int done_command(struct p_context *ctx)
@@ -2543,7 +2566,13 @@ static int done_command(struct p_context *ctx)
 	} else {
 		debug_printf("done_command: initializing\n");
 	}
+	printf("%s:%d: pi=%p pi->progs=%p\n", __func__, __LINE__, pi, pi->progs);
 	pi->progs = xrealloc(pi->progs, sizeof(*pi->progs) * (pi->num_progs+1));
+	printf("%s:%d: pi=%p pi->progs=%p\n", __func__, __LINE__, pi, pi->progs);
+	if (pi == 0xfda5b048) {
+		check_pi_progs_ptr = &(pi->progs);
+		check_pi_progs_val = pi->progs;
+	}
 
 	prog = pi->progs + pi->num_progs;
 #ifndef __U_BOOT__

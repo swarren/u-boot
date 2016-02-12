@@ -21,6 +21,9 @@
 
 #include "ehci.h"
 
+extern void check_check_pi(const char *f, int l);
+#define PI_CHECK() check_check_pi(__FILE__, __LINE__)
+
 #ifndef CONFIG_USB_MAX_CONTROLLER_COUNT
 #define CONFIG_USB_MAX_CONTROLLER_COUNT 1
 #endif
@@ -291,6 +294,9 @@ static void ehci_update_endpt2_dev_n_port(struct usb_device *udev,
 				     QH_ENDPT2_HUBADDR(hubaddr));
 }
 
+extern uint32_t *check_pi_progs_ptr;
+extern uint32_t  check_pi_progs_val;
+
 static int
 ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 		   int length, struct devrequest *req)
@@ -309,6 +315,13 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 	int ret = 0;
 	struct ehci_ctrl *ctrl = ehci_get_ctrl(dev);
 
+	unsigned int ptr = (unsigned int)check_pi_progs_ptr;
+	unsigned int buf = (unsigned int) buffer;
+	unsigned int bufe = buf + length;
+	if ((buf < ptr) && (bufe > ptr))
+		printf("%s:%d: BUFFER OVERLAP (%x %x..%x)\n", __func__, __LINE__, ptr, buf, bufe);
+
+PI_CHECK();
 	debug("dev=%p, pipe=%lx, buffer=%p, length=%d, req=%p\n", dev, pipe,
 	      buffer, length, req);
 	if (req != NULL)
@@ -377,16 +390,21 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 #if CONFIG_SYS_MALLOC_LEN <= 64 + 128 * 1024
 #warning CONFIG_SYS_MALLOC_LEN may be too small for EHCI
 #endif
+PI_CHECK();
 	qtd = memalign(USB_DMA_MINALIGN, qtd_count * sizeof(struct qTD));
+PI_CHECK();
 	if (qtd == NULL) {
 		printf("unable to allocate TDs\n");
 		return -1;
 	}
 
+PI_CHECK();
 	memset(qh, 0, sizeof(struct QH));
 	memset(qtd, 0, qtd_count * sizeof(*qtd));
+PI_CHECK();
 
 	toggle = usb_gettoggle(dev, usb_pipeendpoint(pipe), usb_pipeout(pipe));
+PI_CHECK();
 
 	/*
 	 * Setup QH (3.6 in ehci-r10.pdf)
@@ -533,6 +551,7 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 	}
 
 	ctrl->qh_list.qh_link = cpu_to_hc32((unsigned long)qh | QH_LINK_TYPE_QH);
+PI_CHECK();
 
 	/* Flush dcache */
 	flush_dcache_range((unsigned long)&ctrl->qh_list,
@@ -540,6 +559,7 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 	flush_dcache_range((unsigned long)qh, ALIGN_END_ADDR(struct QH, qh, 1));
 	flush_dcache_range((unsigned long)qtd,
 			   ALIGN_END_ADDR(struct qTD, qtd, qtd_count));
+PI_CHECK();
 
 	/* Set async. queue head pointer. */
 	ehci_writel(&ctrl->hcor->or_asynclistaddr, (unsigned long)&ctrl->qh_list);
@@ -551,6 +571,7 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 	cmd = ehci_readl(&ctrl->hcor->or_usbcmd);
 	cmd |= CMD_ASE;
 	ehci_writel(&ctrl->hcor->or_usbcmd, cmd);
+PI_CHECK();
 
 	ret = handshake((uint32_t *)&ctrl->hcor->or_usbsts, STS_ASS, STS_ASS,
 			100 * 1000);
@@ -558,6 +579,7 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 		printf("EHCI fail timeout STS_ASS set\n");
 		goto fail;
 	}
+PI_CHECK();
 
 	/* Wait for TDs to be processed. */
 	ts = get_timer(0);
@@ -577,6 +599,7 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 			break;
 		WATCHDOG_RESET();
 	} while (get_timer(ts) < timeout);
+PI_CHECK();
 
 	/*
 	 * Invalidate the memory area occupied by buffer
@@ -589,6 +612,7 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 	 */
 	invalidate_dcache_range((unsigned long)buffer,
 		ALIGN((unsigned long)buffer + length, ARCH_DMA_MINALIGN));
+PI_CHECK();
 
 	/* Check that the TD processing happened */
 	if (QT_TOKEN_GET_STATUS(token) & QT_TOKEN_STATUS_ACTIVE)
@@ -605,6 +629,7 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 		printf("EHCI fail timeout STS_ASS reset\n");
 		goto fail;
 	}
+PI_CHECK();
 
 	token = hc32_to_cpu(qh->qh_overlay.qt_token);
 	if (!(QT_TOKEN_GET_STATUS(token) & QT_TOKEN_STATUS_ACTIVE)) {
@@ -644,11 +669,14 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 		      ehci_readl(&ctrl->hcor->or_portsc[1]));
 #endif
 	}
+PI_CHECK();
 
+//printf("%s:%d: free(%p)\n", __func__, __LINE__, qtd);
 	free(qtd);
 	return (dev->status != USB_ST_NOT_PROC) ? 0 : -1;
 
 fail:
+//printf("%s:%d: free(%p)\n", __func__, __LINE__, qtd);
 	free(qtd);
 	return -1;
 }

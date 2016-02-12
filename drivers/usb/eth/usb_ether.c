@@ -13,6 +13,9 @@
 
 #include "usb_ether.h"
 
+extern void check_check_pi(const char *f, int l);
+#define PI_CHECK() check_check_pi(__FILE__, __LINE__)
+
 #ifdef CONFIG_DM_ETH
 
 #define USB_BULK_RECV_TIMEOUT 500
@@ -98,12 +101,15 @@ int usb_ether_receive(struct ueth_data *ueth, int rxsize)
 	int actual_len;
 	int ret;
 
+PI_CHECK();
 	if (rxsize > ueth->rxsize)
 		return -EINVAL;
+PI_CHECK();
 	ret = usb_bulk_msg(ueth->pusb_dev,
 			   usb_rcvbulkpipe(ueth->pusb_dev, ueth->ep_in),
 			   ueth->rxbuf, rxsize, &actual_len,
 			   USB_BULK_RECV_TIMEOUT);
+PI_CHECK();
 	debug("Rx: len = %u, actual = %u, err = %d\n", rxsize, actual_len, ret);
 	if (ret) {
 		printf("Rx: failed to receive: %d\n", ret);
@@ -113,8 +119,10 @@ int usb_ether_receive(struct ueth_data *ueth, int rxsize)
 		debug("Rx: received too many bytes %d\n", actual_len);
 		return -ENOSPC;
 	}
+PI_CHECK();
 	ueth->rxlen = actual_len;
 	ueth->rxptr = 0;
+PI_CHECK();
 
 	return actual_len ? 0 : -EAGAIN;
 }

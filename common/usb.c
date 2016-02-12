@@ -41,6 +41,9 @@
 #include <asm/4xx_pci.h>
 #endif
 
+extern void check_check_pi(const char *f, int l);
+#define PI_CHECK() check_check_pi(__FILE__, __LINE__)
+
 #define USB_BUFSIZ	512
 
 static int asynch_allowed;
@@ -271,14 +274,18 @@ int usb_bulk_msg(struct usb_device *dev, unsigned int pipe,
 	if (len < 0)
 		return -EINVAL;
 	dev->status = USB_ST_NOT_PROC; /*not yet processed */
+PI_CHECK();
 	if (submit_bulk_msg(dev, pipe, data, len) < 0)
 		return -EIO;
+PI_CHECK();
 	while (timeout--) {
 		if (!((volatile unsigned long)dev->status & USB_ST_NOT_PROC))
 			break;
 		mdelay(1);
 	}
+PI_CHECK();
 	*actual_length = dev->act_len;
+PI_CHECK();
 	if (dev->status == 0)
 		return 0;
 	else
