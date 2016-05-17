@@ -10,14 +10,26 @@
 
 	aliases {
 		sdhci0 = "/sdhci@3460000";
+		sdhci1 = "/sdhci@3400000";
+		i2c0 = "/bpmp-i2c";
 	};
 
 	memory {
 		reg = <0x0 0x80000000 0x0 0x60000000>;
 	};
 
+	sdhci@3400000 {
+		status = "okay";
+		wp-gpios = <&gpio_main TEGRA_MAIN_GPIO(P, 4) GPIO_ACTIVE_HIGH>;
+		bus-width = <4>;
+	};
+
 	sdhci@3460000 {
 		status = "okay";
 		bus-width = <8>;
+	};
+
+	bpmp-i2c {
+		status = "okay";
 	};
 };
