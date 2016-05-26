@@ -9,11 +9,12 @@
 
 #include <bouncebuf.h>
 #include <common.h>
+#include <dm/device.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
-#ifndef CONFIG_TEGRA186
-#include <asm/arch/clock.h>
+#if !defined(CONFIG_CLK) && !defined(CONFIG_DM_RESET)
 #include <asm/arch-tegra/clk_rst.h>
+#include <asm/arch/clock.h>
 #endif
 #include <asm/arch-tegra/mmc.h>
 #include <asm/arch-tegra/tegra_mmc.h>
@@ -359,11 +360,14 @@ static void mmc_change_clock(struct mmc_host *host, uint clock)
 	 */
 	if (clock == 0)
 		goto out;
-#ifndef CONFIG_TEGRA186
+#if defined(CONFIG_CLK) || defined(CONFIG_DM_RESET)
+	{
+		ulong rate = clk_set_rate(&host->clk, clock);
+		div = (rate + clock - 1) / clock;
+	}
+#else
 	clock_adjust_periph_pll_div(host->mmc_id, CLOCK_ID_PERIPH, clock,
 				    &div);
-#else
-	div = (20000000 + clock - 1) / clock;
 #endif
 	debug("div = %d\n", div);
 
@@ -549,7 +553,25 @@ static int do_mmc_init(int dev_index, bool removable)
 	      gpio_get_number(&host->cd_gpio));
 
 	host->clock = 0;
-#ifndef CONFIG_TEGRA186
+
+#if defined(CONFIG_CLK) || defined(CONFIG_DM_RESET)
+	{
+		int ret;
+
+		ret = reset_assert(&host->reset_ctl);
+		if (ret)
+			return ret;
+		ret = clk_enable(&host->clk);
+		if (ret)
+			return ret;
+		ret = clk_set_rate(&host->clk, 20000000);
+		if (IS_ERR_VALUE(ret))
+			return ret;
+		ret = reset_deassert(&host->reset_ctl);
+		if (ret)
+			return ret;
+	}
+#else
 	clock_start_periph_pll(host->mmc_id, CLOCK_ID_PERIPH, 20000000);
 #endif
 
@@ -576,11 +598,7 @@ static int do_mmc_init(int dev_index, bool removable)
 	 *  (actually 52MHz)
 	 */
 	host->cfg.f_min = 375000;
-#ifndef CONFIG_TEGRA186
 	host->cfg.f_max = 48000000;
-#else
-	host->cfg.f_max = 375000;
-#endif
 
 	host->cfg.b_max = CONFIG_SYS_MMC_MAX_BLK_COUNT;
 
@@ -612,7 +630,27 @@ static int mmc_get_config(const void *blob, int node, struct mmc_host *host,
 		return -FDT_ERR_NOTFOUND;
 	}
 
-#ifndef CONFIG_TEGRA186
+#if defined(CONFIG_CLK) || defined(CONFIG_DM_RESET)
+	{
+		/*
+		 * FIXME: This variable should go away when the MMC device
+		 * actually is a udevice.
+		 */
+		struct udevice dev;
+		int ret;
+		dev.of_offset = node;
+		ret = reset_get_by_name(&dev, "sdmmc", &host->reset_ctl);
+		if (ret) {
+			debug("reset_get_by_index() failed: %d\n", ret);
+			return ret;
+		}
+		ret = clk_get_by_name(&dev, "sdmmc", &host->clk);
+		if (ret) {
+			debug("clk_get_by_index() failed: %d\n", ret);
+			return ret;
+		}
+	}
+#else
 	host->mmc_id = clock_decode_periph_id(blob, node);
 	if (host->mmc_id == PERIPH_ID_NONE) {
 		debug("%s: could not decode periph id\n", __func__);
