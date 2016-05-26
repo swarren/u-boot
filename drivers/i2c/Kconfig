@@ -154,6 +154,16 @@ config SYS_I2C_UNIPHIER_F
 	  Support for UniPhier FIFO-builtin I2C controller driver.
 	  This I2C controller is used on PH1-Pro4 or newer UniPhier SoCs.
 
+config TEGRA186_BPMP_I2C
+	bool "Enable Tegra186 BPMP-based I2C driver"
+	depends on TEGRA186_BPMP
+	help
+	  Support for Tegra I2C controllers managed by the BPMP (Boot and
+	  Power Management Processor). On Tegra186, some I2C controllers are
+	  directly controlled by the main CPU, whereas others are controlled
+	  by the BPMP, and can only be accessed by the main CPU via IPC
+	  requests to the BPMP. This driver covers the latter case.
+
 source "drivers/i2c/muxes/Kconfig"
 
 endmenu
