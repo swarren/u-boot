@@ -21,7 +21,6 @@ obj-y += cache.o
 obj-y += clock.o
 obj-y += pinmux-common.o
 obj-y += powergate.o
-obj-y += xusb-padctl-dummy.o
 endif
 
 obj-$(CONFIG_ARM64) += arm64-mmu.o
@@ -33,6 +32,7 @@ ifndef CONFIG_SPL_BUILD
 obj-$(CONFIG_ARMV7_PSCI) += psci.o
 endif
 obj-$(CONFIG_DISPLAY_CPUINFO) += sys_info.o
+obj-y += xusb-padctl-dummy.o
 
 obj-$(CONFIG_TEGRA20) += tegra20/
 obj-$(CONFIG_TEGRA30) += tegra30/

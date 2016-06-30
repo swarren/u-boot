@@ -22,8 +22,15 @@
 #include <asm/io.h>
 #include <asm/gpio.h>
 
+#if !defined(CONFIG_CLK) && !defined(CONFIG_DM_RESET)
 #include <asm/arch/clock.h>
 #include <asm/arch/powergate.h>
+#else
+#include <dt-bindings/power-domain/tegra186-powergate.h>
+#include <dt-bindings/reset/tegra186-reset.h>
+#include <asm/arch-tegra/tegra186_bpmp.h>
+#include <asm/arch-tegra/bpmp_abi.h>
+#endif
 #include <asm/arch-tegra/xusb-padctl.h>
 
 #include <linux/list.h>
@@ -31,6 +38,10 @@
 #include <dt-bindings/pinctrl/pinctrl-tegra-xusb.h>
 
 DECLARE_GLOBAL_DATA_PTR;
+
+#ifdef CONFIG_TEGRA186
+#define UPHY_VIA_BPMP
+#endif
 
 #define AFI_AXI_BAR0_SZ	0x00
 #define AFI_AXI_BAR1_SZ	0x04
@@ -103,6 +114,9 @@ DECLARE_GLOBAL_DATA_PTR;
 #define  AFI_PCIE_CONFIG_SM2TMS0_XBAR_CONFIG_222	(0x1 << 20)
 #define  AFI_PCIE_CONFIG_SM2TMS0_XBAR_CONFIG_X4_X1	(0x1 << 20)
 #define  AFI_PCIE_CONFIG_SM2TMS0_XBAR_CONFIG_411	(0x2 << 20)
+#define  AFI_PCIE_CONFIG_SM2TMS0_XBAR_CONFIG_T186_401	(0x0 << 20)
+#define  AFI_PCIE_CONFIG_SM2TMS0_XBAR_CONFIG_T186_211	(0x1 << 20)
+#define  AFI_PCIE_CONFIG_SM2TMS0_XBAR_CONFIG_T186_111	(0x2 << 20)
 
 #define AFI_FUSE			0x104
 #define  AFI_FUSE_PCIE_T0_GEN2_DIS	(1 << 2)
@@ -110,6 +124,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #define AFI_PEX0_CTRL			0x110
 #define AFI_PEX1_CTRL			0x118
 #define AFI_PEX2_CTRL			0x128
+#define AFI_PEX2_CTRL_T186		0x19c
 #define  AFI_PEX_CTRL_RST		(1 << 0)
 #define  AFI_PEX_CTRL_CLKREQ_EN		(1 << 1)
 #define  AFI_PEX_CTRL_REFCLK_EN		(1 << 3)
@@ -173,6 +188,7 @@ enum tegra_pci_id {
 	TEGRA30_PCIE,
 	TEGRA124_PCIE,
 	TEGRA210_PCIE,
+	TEGRA186_PCIE,
 };
 
 struct tegra_pcie_port {
@@ -189,6 +205,7 @@ struct tegra_pcie_soc {
 	unsigned int num_ports;
 	unsigned long pads_pll_ctl;
 	unsigned long tx_ref_sel;
+	unsigned long afi_pex2_ctrl;
 	u32 pads_refclk_cfg0;
 	u32 pads_refclk_cfg1;
 	bool has_pex_clkreq_en;
@@ -209,7 +226,9 @@ struct tegra_pcie {
 	unsigned long xbar;
 
 	const struct tegra_pcie_soc *soc;
+#ifndef UPHY_VIA_BPMP
 	struct tegra_xusb_phy *phy;
+#endif
 };
 
 static void afi_writel(struct tegra_pcie *pcie, unsigned long value,
@@ -229,10 +248,12 @@ static void pads_writel(struct tegra_pcie *pcie, unsigned long value,
 	writel(value, pcie->pads.start + offset);
 }
 
+#ifndef UPHY_VIA_BPMP
 static unsigned long pads_readl(struct tegra_pcie *pcie, unsigned long offset)
 {
 	return readl(pcie->pads.start + offset);
 }
+#endif
 
 static unsigned long rp_readl(struct tegra_pcie_port *port,
 			      unsigned long offset)
@@ -400,6 +421,24 @@ static int tegra_pcie_get_xbar_config(const void *fdt, int node, u32 lanes,
 			return 0;
 		}
 		break;
+	case TEGRA186_PCIE:
+		switch (lanes) {
+		case 0x0010004:
+			debug("x4 x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_SM2TMS0_XBAR_CONFIG_T186_401;
+			return 0;
+
+		case 0x0010102:
+			debug("x2 x1 x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_SM2TMS0_XBAR_CONFIG_T186_211;
+			return 0;
+
+		case 0x0010101:
+			debug("x1 x1 x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_SM2TMS0_XBAR_CONFIG_T186_111;
+			return 0;
+		}
+		break;
 	default:
 		break;
 	}
@@ -471,6 +510,7 @@ static int tegra_pcie_parse_dt(const void *fdt, int node, enum tegra_pci_id id,
 		return err;
 	}
 
+#ifndef UPHY_VIA_BPMP
 	pcie->phy = tegra_xusb_phy_get(TEGRA_XUSB_PADCTL_PCIE);
 	if (pcie->phy) {
 		err = tegra_xusb_phy_prepare(pcie->phy);
@@ -479,6 +519,7 @@ static int tegra_pcie_parse_dt(const void *fdt, int node, enum tegra_pci_id id,
 			return err;
 		}
 	}
+#endif
 
 	fdt_for_each_subnode(fdt, subnode, node) {
 		unsigned int index = 0, num_lanes = 0;
@@ -523,6 +564,7 @@ static int tegra_pcie_parse_dt(const void *fdt, int node, enum tegra_pci_id id,
 	return 0;
 }
 
+#ifndef UPHY_VIA_BPMP
 static int tegra_pcie_power_on(struct tegra_pcie *pcie)
 {
 	const struct tegra_pcie_soc *soc = pcie->soc;
@@ -569,7 +611,68 @@ static int tegra_pcie_power_on(struct tegra_pcie *pcie)
 
 	return 0;
 }
+#else
+#define UPDATE	BIT(0)
+#define ON	BIT(1)
+#include <dt-bindings/clock/tegra186-clock.h>
+extern struct udevice *bpmp_dev;
+static int tegra_pcie_power_on(struct tegra_pcie *pcie)
+{
+	struct mrq_pg_update_state_request req;
+	struct mrq_clk_request clk_req;
+	struct mrq_clk_response clk_resp;
+	struct mrq_reset_request rst_req;
+	int ret;
 
+	req.partition_id = TEGRA186_POWER_DOMAIN_PCX;
+	req.logic_state = UPDATE | ON;
+	req.sram_state = UPDATE | ON;
+	req.clock_state = UPDATE | ON;
+
+	ret = tegra186_bpmp_call(bpmp_dev, MRQ_PG_UPDATE_STATE, &req,
+				  sizeof(req), NULL, 0);
+	if (ret) {
+		error("MRQ_PG_UPDATE_STATE failed: %d\n", ret);
+		return ret;
+	}
+
+	clk_req.cmd_and_id = (CMD_CLK_ENABLE << 24) | TEGRA186_CLK_AFI;
+	ret = tegra186_bpmp_call(bpmp_dev, MRQ_CLK,
+				 &clk_req, sizeof(clk_req), &clk_resp, sizeof(clk_resp));
+	if (ret) {
+		error("MRQ_CLK(afi) failed: %d\n", ret);
+		return ret;
+	}
+
+	clk_req.cmd_and_id = (CMD_CLK_ENABLE << 24) | TEGRA186_CLK_PCIE;
+	ret = tegra186_bpmp_call(bpmp_dev, MRQ_CLK,
+				 &clk_req, sizeof(clk_req), &clk_resp, sizeof(clk_resp));
+	if (ret) {
+		error("MRQ_CLK(pcie) failed: %d\n", ret);
+		return ret;
+	}
+
+	rst_req.cmd = CMD_RESET_DEASSERT;
+	rst_req.reset_id = TEGRA186_RESET_AFI;
+	ret = tegra186_bpmp_call(bpmp_dev, MRQ_RESET, &rst_req, sizeof(rst_req), NULL, 0);
+	if (ret) {
+		error("MRQ_RESET(afi) failed: %d\n", ret);
+		return ret;
+	}
+
+	rst_req.cmd = CMD_RESET_DEASSERT;
+	rst_req.reset_id = TEGRA186_RESET_PCIE;
+	ret = tegra186_bpmp_call(bpmp_dev, MRQ_RESET, &rst_req, sizeof(rst_req), NULL, 0);
+	if (ret) {
+		error("MRQ_RESET(pcie) failed: %d\n", ret);
+		return ret;
+	}
+
+	return 0;
+}
+#endif
+
+#ifndef UPHY_VIA_BPMP
 static int tegra_pcie_pll_wait(struct tegra_pcie *pcie, unsigned long timeout)
 {
 	const struct tegra_pcie_soc *soc = pcie->soc;
@@ -639,15 +742,22 @@ static int tegra_pcie_phy_enable(struct tegra_pcie *pcie)
 
 	return 0;
 }
+#endif
 
 static int tegra_pcie_enable_controller(struct tegra_pcie *pcie)
 {
 	const struct tegra_pcie_soc *soc = pcie->soc;
 	struct tegra_pcie_port *port;
 	u32 value;
+#ifndef UPHY_VIA_BPMP
 	int err;
+#endif
 
+#ifndef UPHY_VIA_BPMP
 	if (pcie->phy) {
+#else
+	{
+#endif
 		value = afi_readl(pcie, AFI_PLLE_CONTROL);
 		value &= ~AFI_PLLE_CONTROL_BYPASS_PADS2PLLE_CONTROL;
 		value |= AFI_PLLE_CONTROL_PADS2PLLE_CONTROL_EN;
@@ -675,6 +785,7 @@ static int tegra_pcie_enable_controller(struct tegra_pcie *pcie)
 
 	afi_writel(pcie, value, AFI_FUSE);
 
+#ifndef UPHY_VIA_BPMP
 	if (pcie->phy)
 		err = tegra_xusb_phy_enable(pcie->phy);
 	else
@@ -684,9 +795,22 @@ static int tegra_pcie_enable_controller(struct tegra_pcie *pcie)
 		error("failed to power on PHY: %d\n", err);
 		return err;
 	}
+#endif
 
+#if !defined(CONFIG_CLK) && !defined(CONFIG_DM_RESET)
 	/* take the PCIEXCLK logic out of reset */
 	reset_set_enable(PERIPH_ID_PCIEXCLK, 0);
+#else
+	// FIXME: Convert to use reset API
+	{
+		struct mrq_reset_request req;
+
+		req.cmd = CMD_RESET_DEASSERT;
+		req.reset_id = TEGRA186_RESET_PCIEXCLK;
+
+		tegra186_bpmp_call(bpmp_dev, MRQ_RESET, &req, sizeof(req), NULL, 0);
+	}
+#endif
 
 	/* finally enable PCIe */
 	value = afi_readl(pcie, AFI_CONFIGURATION);
@@ -787,7 +911,7 @@ static unsigned long tegra_pcie_port_get_pex_ctrl(struct tegra_pcie_port *port)
 		break;
 
 	case 2:
-		ret = AFI_PEX2_CTRL;
+		ret = port->pcie->soc->afi_pex2_ctrl;
 		break;
 	}
 
@@ -945,6 +1069,7 @@ static const struct tegra_pcie_soc pci_tegra_soc[] = {
 		.num_ports = 3,
 		.pads_pll_ctl = PADS_PLL_CTL_TEGRA30,
 		.tx_ref_sel = PADS_PLL_CTL_TXCLKREF_BUF_EN,
+		.afi_pex2_ctrl = AFI_PEX2_CTRL,
 		.pads_refclk_cfg0 = 0xfa5cfa5c,
 		.pads_refclk_cfg1 = 0xfa5cfa5c,
 		.has_pex_clkreq_en = true,
@@ -972,7 +1097,16 @@ static const struct tegra_pcie_soc pci_tegra_soc[] = {
 		.has_cml_clk = true,
 		.has_gen2 = true,
 		.force_pca_enable = true,
-	}
+	},
+	[TEGRA186_PCIE] = {
+		.num_ports = 3,
+		.afi_pex2_ctrl = AFI_PEX2_CTRL_T186,
+		.pads_refclk_cfg0 = 0x80b880b8,
+		.pads_refclk_cfg1 = 0x000480b8,
+		.has_pex_clkreq_en = true,
+		.has_pex_bias_ctrl = true,
+		.has_gen2 = true,
+	},
 };
 
 static int pci_tegra_ofdata_to_platdata(struct udevice *dev)
@@ -1033,6 +1167,7 @@ static const struct udevice_id pci_tegra_ids[] = {
 	{ .compatible = "nvidia,tegra30-pcie", .data = TEGRA30_PCIE },
 	{ .compatible = "nvidia,tegra124-pcie", .data = TEGRA124_PCIE },
 	{ .compatible = "nvidia,tegra210-pcie", .data = TEGRA210_PCIE },
+	{ .compatible = "nvidia,tegra186-pcie", .data = TEGRA186_PCIE },
 	{ }
 };
 

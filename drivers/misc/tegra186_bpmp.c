@@ -25,6 +25,8 @@ struct tegra186_bpmp {
 	struct tegra_ivc ivc;
 };
 
+struct udevice *bpmp_dev;
+
 int tegra186_bpmp_call(struct udevice *dev, uint32_t mrq,
 		       void *tx_msg, uint32_t tx_size,
 		       void *rx_msg, uint32_t rx_size)
@@ -166,6 +168,7 @@ static int tegra186_bpmp_probe(struct udevice *dev)
 	ulong tx_base, rx_base, start_time;
 
 	debug("%s(dev=%p) (priv=%p)\n", __func__, dev, priv);
+	bpmp_dev = dev;
 
 	ret = mbox_get_by_index(dev, 0, &priv->mbox);
 	if (ret) {
