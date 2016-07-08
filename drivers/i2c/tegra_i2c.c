@@ -12,11 +12,18 @@
 #include <fdtdec.h>
 #include <i2c.h>
 #include <asm/io.h>
-#include <asm/arch/clock.h>
-#include <asm/arch/funcmux.h>
-#include <asm/arch/gpio.h>
-#include <asm/arch/pinmux.h>
+#if defined(CONFIG_CLK) || defined(CONFIG_DM_RESET)
+#include <clk.h>
+#include <reset.h>
+#else
 #include <asm/arch-tegra/clk_rst.h>
+#include <asm/arch/clock.h>
+#endif
+#ifndef CONFIG_TEGRA186
+#include <asm/arch/funcmux.h>
+#include <asm/arch/pinmux.h>
+#endif
+#include <asm/arch/gpio.h>
 #include <asm/arch-tegra/tegra_i2c.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -30,7 +37,12 @@ enum i2c_type {
 /* Information about i2c controller */
 struct i2c_bus {
 	int			id;
+#if defined(CONFIG_CLK) || defined(CONFIG_DM_RESET)
+	struct reset_ctl	reset_ctl;
+	struct clk		clk;
+#else
 	enum periph_id		periph_id;
+#endif
 	int			speed;
 	int			pinmux_config;
 	struct i2c_control	*control;
@@ -62,11 +74,40 @@ static void set_packet_mode(struct i2c_bus *i2c_bus)
 static void i2c_reset_controller(struct i2c_bus *i2c_bus)
 {
 	/* Reset I2C controller. */
+#if defined(CONFIG_DM_RESET)
+	reset_assert(&i2c_bus->reset_ctl);
+	udelay(1);
+	reset_deassert(&i2c_bus->reset_ctl);
+	udelay(1);
+#else
 	reset_periph(i2c_bus->periph_id, 1);
+#endif
 
 	/* re-program config register to packet mode */
 	set_packet_mode(i2c_bus);
 }
+
+#if defined(CONFIG_CLK) || defined(CONFIG_DM_RESET)
+static int i2c_init_clock(struct i2c_bus *i2c_bus, unsigned rate)
+{
+	int ret;
+
+	ret = reset_assert(&i2c_bus->reset_ctl);
+	if (ret)
+		return ret;
+	ret = clk_enable(&i2c_bus->clk);
+	if (ret)
+		return ret;
+	ret = clk_set_rate(&i2c_bus->clk, rate);
+	if (IS_ERR_VALUE(ret))
+		return ret;
+	ret = reset_deassert(&i2c_bus->reset_ctl);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+#endif
 
 static void i2c_init_controller(struct i2c_bus *i2c_bus)
 {
@@ -78,8 +119,12 @@ static void i2c_init_controller(struct i2c_bus *i2c_bus)
 	 * here, in section 23.3.1, but in fact we seem to need a factor of
 	 * 16 to get the right frequency.
 	 */
+#if defined(CONFIG_CLK) || defined(CONFIG_DM_RESET)
+	i2c_init_clock(i2c_bus, i2c_bus->speed * 2 * 8);
+#else
 	clock_start_periph_pll(i2c_bus->periph_id, CLOCK_ID_PERIPH,
 		i2c_bus->speed * 2 * 8);
+#endif
 
 	if (i2c_bus->type == TYPE_114) {
 		/*
@@ -94,12 +139,17 @@ static void i2c_init_controller(struct i2c_bus *i2c_bus)
 		 * is running, we hang, and we need it for the new calc.
 		 */
 		int clk_div_stdfst_mode = readl(&i2c_bus->regs->clk_div) >> 16;
+		unsigned rate = CLK_MULT_STD_FAST_MODE *
+				(clk_div_stdfst_mode + 1) * i2c_bus->speed * 2;
 		debug("%s: CLK_DIV_STD_FAST_MODE setting = %d\n", __func__,
 			clk_div_stdfst_mode);
 
+#if defined(CONFIG_CLK) || defined(CONFIG_DM_RESET)
+		i2c_init_clock(i2c_bus, rate);
+#else
 		clock_start_periph_pll(i2c_bus->periph_id, CLOCK_ID_PERIPH,
-			CLK_MULT_STD_FAST_MODE * (clk_div_stdfst_mode + 1) *
-			i2c_bus->speed * 2);
+				       rate);
+#endif
 	}
 
 	/* Reset I2C controller. */
@@ -112,7 +162,9 @@ static void i2c_init_controller(struct i2c_bus *i2c_bus)
 		setbits_le32(&dvc->ctrl3, DVC_CTRL_REG3_I2C_HW_SW_PROG_MASK);
 	}
 
+#ifndef CONFIG_TEGRA186
 	funcmux_select(i2c_bus->periph_id, i2c_bus->pinmux_config);
+#endif
 }
 
 static void send_packet_headers(
@@ -333,8 +385,6 @@ static int tegra_i2c_set_bus_speed(struct udevice *dev, unsigned int speed)
 static int tegra_i2c_probe(struct udevice *dev)
 {
 	struct i2c_bus *i2c_bus = dev_get_priv(dev);
-	const void *blob = gd->fdt_blob;
-	int node = dev->of_offset;
 	bool is_dvc;
 
 	i2c_bus->id = dev->seq;
@@ -345,20 +395,45 @@ static int tegra_i2c_probe(struct udevice *dev)
 	 * We don't have a binding for pinmux yet. Leave it out for now. So
 	 * far no one needs anything other than the default.
 	 */
+#ifndef CONFIG_TEGRA186
 	i2c_bus->pinmux_config = FUNCMUX_DEFAULT;
-	i2c_bus->periph_id = clock_decode_periph_id(blob, node);
+#endif
 
-	/*
-	 * We can't specify the pinmux config in the fdt, so I2C2 will not
-	 * work on Seaboard. It normally has no devices on it anyway.
-	 * You could add in this little hack if you need to use it.
-	 * The correct solution is a pinmux binding in the fdt.
-	 *
-	 *	if (i2c_bus->periph_id == PERIPH_ID_I2C2)
-	 *		i2c_bus->pinmux_config = FUNCMUX_I2C2_PTA;
-	 */
-	if (i2c_bus->periph_id == -1)
-		return -EINVAL;
+#if defined(CONFIG_CLK) || defined(CONFIG_DM_RESET)
+	{
+		int ret;
+		ret = reset_get_by_name(dev, "i2c", &i2c_bus->reset_ctl);
+		if (ret) {
+			debug("reset_get_by_name() failed: %d\n", ret);
+			return ret;
+		}
+		ret = clk_get_by_name(dev, "i2c", &i2c_bus->clk);
+		if (ret) {
+			debug("clk_get_by_name() failed: %d\n", ret);
+			return ret;
+		}
+	}
+#else
+	{
+		const void *blob = gd->fdt_blob;
+		int node = dev->of_offset;
+		i2c_bus->periph_id = clock_decode_periph_id(blob, node);
+
+		/*
+		 * We can't specify the pinmux config in the fdt, so I2C2 will
+		 * not work on Seaboard. It normally has no devices on it
+		 * anyway.
+		 *
+		 * You could add in this little hack if you need to use it.
+		 * The correct solution is a pinmux binding in the fdt.
+		 *
+		 *	if (i2c_bus->periph_id == PERIPH_ID_I2C2)
+		 *		i2c_bus->pinmux_config = FUNCMUX_I2C2_PTA;
+		 */
+		if (i2c_bus->periph_id == -1)
+			return -EINVAL;
+	}
+#endif
 
 	is_dvc = dev_get_driver_data(dev) == TYPE_DVC;
 	if (is_dvc) {
@@ -370,7 +445,12 @@ static int tegra_i2c_probe(struct udevice *dev)
 	i2c_init_controller(i2c_bus);
 	debug("%s: controller bus %d at %p, periph_id %d, speed %d: ",
 	      is_dvc ? "dvc" : "i2c", dev->seq, i2c_bus->regs,
-	      i2c_bus->periph_id, i2c_bus->speed);
+#ifndef CONFIG_TEGRA186
+	      i2c_bus->periph_id,
+#else
+	      -1,
+#endif
+	      i2c_bus->speed);
 
 	return 0;
 }
