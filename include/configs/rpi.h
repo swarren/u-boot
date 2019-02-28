@@ -144,7 +144,8 @@
 	"scriptaddr=0x02400000\0" \
 	"pxefile_addr_r=0x02500000\0" \
 	"fdt_addr_r=0x02600000\0" \
-	"ramdisk_addr_r=0x02700000\0"
+	"ramdisk_addr_r=0x02700000\0" \
+	"netupdate=setenv ipaddr 192.168.99.2; if tftpboot $loadaddr 192.168.99.1:u-boot.bin; then fatwrite mmc 0:1 $loadaddr /kernel8.img $filesize; fi\0"
 
 #define BOOT_TARGET_DEVICES(func) \
 	func(MMC, mmc, 0) \
